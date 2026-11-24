@@ -7,7 +7,8 @@
 // bloqueia a escrita.
 import type { AgentEvent } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
-import { CodexConnection, type RequestId, type ServerNotification, type ServerRequest } from './codex-rpc'
+import { connectCodex } from './codex-rpc'
+import type { IncomingNotification as ServerNotification, IncomingRequest as ServerRequest, JsonRpcProcess, RequestId } from './rpc'
 import { clip, shortPath } from './describe'
 
 type Emit = (event: AgentEvent) => void
@@ -16,7 +17,7 @@ const APPROVAL_POLICY = 'on-request'
 const SANDBOX = 'read-only'
 
 interface Live {
-  rpc: CodexConnection
+  rpc: JsonRpcProcess
   emit: Emit
   cwd: string
   threadId: string
@@ -225,7 +226,7 @@ export const codexAdapter: AgentAdapter = {
     let session: Live | null = null
     const early: (() => void)[] = []
 
-    const rpc = new CodexConnection(cwd, {
+    const rpc = connectCodex(cwd, {
       onRequest: (request) => {
         const run = (): void => {
           if (session) handleRequest(sessionId, session, request)

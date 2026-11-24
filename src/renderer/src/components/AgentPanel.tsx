@@ -8,7 +8,7 @@ import { Button } from './ui/Button'
 export const AGENTS: { id: AgentId; name: string; tool: string; available: boolean }[] = [
   { id: 'claude', name: 'Claude', tool: 'Claude Code', available: true },
   { id: 'codex', name: 'ChatGPT', tool: 'Codex', available: true },
-  { id: 'gemini', name: 'Gemini', tool: 'Gemini CLI', available: false }
+  { id: 'gemini', name: 'Gemini', tool: 'Gemini CLI', available: true }
 ]
 
 interface Props {
@@ -58,6 +58,7 @@ export function AgentPanel({ project, agents }: Props) {
   }
 
   const loading = agents.isLoading(project.id)
+  const startingAgent = agents.startingAgent(project.id)
 
   return (
     <aside className="pane">
@@ -68,6 +69,12 @@ export function AgentPanel({ project, agents }: Props) {
       {startError && (
         <p className="notice" role="alert">
           {startError}
+        </p>
+      )}
+      {startingAgent === 'gemini' && (
+        <p className="text-caption" role="status">
+          Iniciando o Gemini. Se for a primeira vez, o navegador vai abrir para você entrar com a
+          sua conta Google; conclua o login lá e volte aqui.
         </p>
       )}
       <ul className="stack">

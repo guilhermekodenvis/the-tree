@@ -26,6 +26,8 @@ export interface AgentsState {
   startErrorOf(projectId: string): string | null
   /** Verdadeiro enquanto o agente está sendo iniciado (leva alguns segundos). */
   isStarting(projectId: string): boolean
+  /** Qual agente está sendo iniciado neste projeto, se algum. */
+  startingAgent(projectId: string): AgentId | null
   start(projectId: string, agent: AgentId): Promise<void>
   send(projectId: string, text: string): Promise<void>
   respond(projectId: string, requestId: string, allow: boolean): Promise<void>
@@ -44,7 +46,7 @@ const without = <T>(map: ByProject<T>, key: string): ByProject<T> => {
 export function useAgents(): AgentsState {
   const [chats, setChats] = useState<ByProject<Chat>>({})
   const [loaded, setLoaded] = useState<ByProject<'loading' | 'done'>>({})
-  const [starting, setStarting] = useState<ByProject<true>>({})
+  const [starting, setStarting] = useState<ByProject<AgentId>>({})
   const [startErrors, setStartErrors] = useState<ByProject<string>>({})
 
   // Cópia sempre atual das conversas, para as ações não dependerem de um estado antigo.
@@ -110,7 +112,7 @@ export function useAgents(): AgentsState {
   const launch = useCallback(
     async (projectId: string, agent: AgentId, resume: boolean): Promise<string | null> => {
       setStartErrors((prev) => without(prev, projectId))
-      setStarting((prev) => ({ ...prev, [projectId]: true }))
+      setStarting((prev) => ({ ...prev, [projectId]: agent }))
       try {
         const session = await window.api.agents.start(projectId, agent, resume)
         return session.id
@@ -204,6 +206,7 @@ export function useAgents(): AgentsState {
     isLoading: (projectId) => loaded[projectId] !== 'done',
     startErrorOf: (projectId) => startErrors[projectId] ?? null,
     isStarting: (projectId) => projectId in starting,
+    startingAgent: (projectId) => starting[projectId] ?? null,
     start,
     send,
     respond,
