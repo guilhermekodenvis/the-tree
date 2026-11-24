@@ -5,6 +5,7 @@ import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
 import { AgentManager } from './agents/manager'
+import { hasSecret, removeSecret, setSecret } from './secrets'
 
 /** Envia um aviso para todas as janelas abertas. */
 function broadcast(channel: string, payload: unknown): void {
@@ -42,6 +43,14 @@ export function registerIpc(): AgentManager {
     watcher.watch(projectId, (change) => broadcast('files:changed', change))
   )
   ipcMain.handle('files:unwatch', (_e, projectId: string) => watcher.unwatch(projectId))
+
+  ipcMain.handle('settings:geminiKey:has', () => hasSecret('gemini-api-key'))
+  ipcMain.handle('settings:geminiKey:set', (_e, key: unknown) => {
+    const value = typeof key === 'string' ? key.trim() : ''
+    if (!value || /\s/.test(value)) throw new Error('A chave parece inválida: cole só a chave, sem espaços.')
+    return setSecret('gemini-api-key', value)
+  })
+  ipcMain.handle('settings:geminiKey:remove', () => removeSecret('gemini-api-key'))
 
   ipcMain.handle('agents:history', (_e, projectId: string) => agents.history(projectId))
   ipcMain.handle('agents:start', (_e, projectId: string, agent: AgentId, resume: boolean) =>

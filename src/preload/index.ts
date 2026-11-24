@@ -26,6 +26,13 @@ const api: TreeApi = {
     unwatch: (projectId) => ipcRenderer.invoke('files:unwatch', projectId),
     onChanged: (listener) => listen<FilesChanged>('files:changed', listener)
   },
+  settings: {
+    geminiKey: {
+      has: () => ipcRenderer.invoke('settings:geminiKey:has'),
+      set: (key) => ipcRenderer.invoke('settings:geminiKey:set', key),
+      remove: () => ipcRenderer.invoke('settings:geminiKey:remove')
+    }
+  },
   agents: {
     history: (projectId) => ipcRenderer.invoke('agents:history', projectId),
     start: (projectId, agent, resume) =>

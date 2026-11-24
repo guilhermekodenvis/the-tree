@@ -100,6 +100,17 @@ export interface TreeApi {
     unwatch(projectId: string): Promise<void>
     onChanged(listener: (change: FilesChanged) => void): () => void
   }
+  settings: {
+    /**
+     * Chave de API do Gemini. A interface nunca recebe a chave de volta:
+     * só pergunta se existe, grava uma nova ou apaga.
+     */
+    geminiKey: {
+      has(): Promise<boolean>
+      set(key: string): Promise<void>
+      remove(): Promise<void>
+    }
+  }
   agents: {
     /** Conversa salva do projeto, se houver. Não inicia nenhum processo. */
     history(projectId: string): Promise<ChatRecord | null>

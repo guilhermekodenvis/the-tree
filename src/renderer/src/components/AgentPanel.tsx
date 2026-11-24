@@ -1,9 +1,10 @@
 // Lado direito da área de trabalho: escolha do agente e a conversa do projeto ativo.
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { AgentId, Project } from '../../../shared/types'
 import type { AgentsState } from '../hooks/useAgents'
 import { ChatView } from './ChatView'
 import { Button } from './ui/Button'
+import { GeminiKeyForm, useGeminiKey } from './GeminiKey'
 
 export const AGENTS: { id: AgentId; name: string; tool: string; available: boolean }[] = [
   { id: 'claude', name: 'Claude', tool: 'Claude Code', available: true },
@@ -18,6 +19,8 @@ interface Props {
 
 export function AgentPanel({ project, agents }: Props) {
   const projectId = project?.id ?? null
+  const geminiKey = useGeminiKey()
+  const [editingKey, setEditingKey] = useState(false)
 
   // Ao abrir um projeto, traz a conversa salva dele (se houver).
   useEffect(() => {
@@ -71,29 +74,53 @@ export function AgentPanel({ project, agents }: Props) {
           {startError}
         </p>
       )}
-      {startingAgent === 'gemini' && (
-        <p className="text-caption" role="status">
-          Iniciando o Gemini. Se for a primeira vez, o navegador vai abrir para você entrar com a
-          sua conta Google; conclua o login lá e volte aqui.
-        </p>
-      )}
       <ul className="stack">
-        {AGENTS.map((agent) => (
-          <li key={agent.id} className="card">
-            <span className={`dot dot--${agent.id}`} />
-            <div className="card__body">
-              <div>{agent.name}</div>
-              <div className="text-caption">{agent.tool}</div>
-            </div>
-            {agent.available ? (
-              <Button disabled={loading || starting} onClick={() => agents.start(project.id, agent.id)}>
-                {starting ? 'Iniciando…' : 'Conversar'}
-              </Button>
-            ) : (
-              <span className="badge">Em breve</span>
-            )}
-          </li>
-        ))}
+        {AGENTS.map((agent) => {
+          // O Gemini precisa de uma chave de API antes de conversar.
+          const needsKey = agent.id === 'gemini' && geminiKey.configured !== true
+          return (
+            <li key={agent.id} className="card card--stacked">
+              <div className="card__row">
+                <span className={`dot dot--${agent.id}`} />
+                <div className="card__body">
+                  <div>{agent.name}</div>
+                  <div className="text-caption">{agent.tool}</div>
+                </div>
+                {!agent.available ? (
+                  <span className="badge">Em breve</span>
+                ) : needsKey ? (
+                  <Button
+                    disabled={geminiKey.configured === null || editingKey}
+                    onClick={() => setEditingKey(true)}
+                  >
+                    Configurar chave
+                  </Button>
+                ) : (
+                  <Button
+                    disabled={loading || starting}
+                    onClick={() => agents.start(project.id, agent.id)}
+                  >
+                    {startingAgent === agent.id ? 'Iniciando…' : 'Conversar'}
+                  </Button>
+                )}
+              </div>
+              {agent.id === 'gemini' && geminiKey.configured && !editingKey && (
+                <button type="button" className="link card__link" onClick={() => setEditingKey(true)}>
+                  Trocar ou remover a chave
+                </button>
+              )}
+              {agent.id === 'gemini' && editingKey && (
+                <GeminiKeyForm
+                  configured={geminiKey.configured === true}
+                  onDone={() => {
+                    setEditingKey(false)
+                    geminiKey.refresh()
+                  }}
+                />
+              )}
+            </li>
+          )
+        })}
       </ul>
     </aside>
   )

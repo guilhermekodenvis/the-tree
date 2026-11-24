@@ -7,13 +7,13 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: IconName
 }
 
-export function Button({ variant = 'default', icon, children, className = '', ...rest }: Props) {
+export function Button({ variant = 'default', icon, children, className = '', type = 'button', ...rest }: Props) {
   const classes = ['btn', variant === 'accent' ? 'btn--accent' : '', className]
     .filter(Boolean)
     .join(' ')
 
   return (
-    <button type="button" className={classes} {...rest}>
+    <button type={type} className={classes} {...rest}>
       {icon && <Icon name={icon} />}
       {children}
     </button>

@@ -1,12 +1,13 @@
 // Adaptador do Gemini CLI, via ACP (Agent Client Protocol), o protocolo aberto
 // usado por editores como o Zed. O Gemini CLI vem instalado com o app
-// (@google/gemini-cli) e roda na pasta do projeto, com o login guardado em ~/.gemini.
+// (@google/gemini-cli) e roda na pasta do projeto.
 //
 // Segurança: o Gemini roda no modo de aprovação padrão. Ele lê os arquivos
 // livremente, e cada edição ou comando vira um pedido de autorização na interface.
 //
-// Login: se ainda não houver login, o adaptador pede "Entrar com Google", que abre o
-// navegador do sistema para você entrar com a sua conta. Nada de senha passa pelo app.
+// Login: o Google deixou de aceitar o Gemini CLI com conta Google pessoal, então o
+// acesso é por chave de API do Google AI Studio. A chave fica criptografada pelo app
+// (ver secrets.ts) e é entregue ao Gemini a cada início de conversa.
 import { randomUUID } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
@@ -21,15 +22,43 @@ import type {
   ToolKind
 } from '@agentclientprotocol/sdk'
 import type { AgentEvent } from '../../shared/types'
+import { getSecret } from '../secrets'
 import type { AgentAdapter } from './adapter'
 import { clip, shortPath } from './describe'
-import { JsonRpcProcess, RpcError, type IncomingNotification, type IncomingRequest, type RequestId } from './rpc'
+import { JsonRpcProcess, type IncomingNotification, type IncomingRequest, type RequestId } from './rpc'
 
 type Emit = (event: AgentEvent) => void
 
-/** Código do ACP para "é preciso fazer login antes". */
-const AUTH_REQUIRED = -32000
-const GOOGLE_LOGIN = 'oauth-personal'
+const API_KEY_LOGIN = 'gemini-api-key'
+
+/** Como o Google responde a uma chave inválida ("API key not valid", motivo API_KEY_INVALID). */
+const BAD_KEY = /API key not valid|API_KEY_INVALID/i
+const BAD_KEY_HELP =
+  'A chave do Gemini foi recusada pelo Google. Confira se ela está ativa no Google AI Studio. Para trocar, use "Nova conversa" no topo e depois "Trocar ou remover a chave" no cartão do Gemini.'
+
+/**
+ * Os erros do Google chegam como JSON dentro de JSON. Pega a mensagem mais interna,
+ * que é a que explica o problema.
+ */
+function innermostMessage(text: string): string {
+  let message = text
+  for (let depth = 0; depth < 5; depth++) {
+    let parsed: { error?: { message?: unknown }; message?: unknown }
+    try {
+      parsed = JSON.parse(message)
+    } catch {
+      break // não é JSON: é a própria mensagem
+    }
+    const inner = parsed?.error?.message ?? parsed?.message
+    if (typeof inner !== 'string') break
+    message = inner
+  }
+  return message.trim()
+}
+
+function friendly(message: string): string {
+  return BAD_KEY.test(message) ? BAD_KEY_HELP : innermostMessage(message)
+}
 
 interface Live {
   rpc: JsonRpcProcess
@@ -192,23 +221,15 @@ function sessionOf(sessionId: string): Live {
   return session
 }
 
-/** Cria a sessão; se faltar login, abre o login do Google e tenta de novo. */
-async function withLogin<T>(rpc: JsonRpcProcess, init: InitializeResponse, attempt: () => Promise<T>): Promise<T> {
-  try {
-    return await attempt()
-  } catch (err) {
-    const canLogin = init.authMethods?.some((m) => m.id === GOOGLE_LOGIN)
-    if (!(err instanceof RpcError) || err.code !== AUTH_REQUIRED || !canLogin) throw err
-    // Abre o navegador com a página de login do Google e espera você concluir.
-    await rpc.request('authenticate', { methodId: GOOGLE_LOGIN })
-    return attempt()
-  }
-}
-
 export const geminiAdapter: AgentAdapter = {
   id: 'gemini',
 
   async start(sessionId, cwd, emit, resumeId) {
+    const apiKey = await getSecret('gemini-api-key')
+    if (!apiKey) {
+      throw new Error('Falta a chave de API do Gemini. Use "Configurar chave" no cartão do Gemini.')
+    }
+
     let session: Live | null = null
 
     const rpc = spawnGemini(cwd, {
@@ -235,6 +256,11 @@ export const geminiAdapter: AgentAdapter = {
         clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
         clientInfo: { name: 'the-tree', title: 'The Tree', version: '0.0.1' }
       })
+      if (!init.authMethods?.some((m) => m.id === API_KEY_LOGIN)) {
+        throw new Error('esta versão do Gemini CLI não aceita login por chave de API.')
+      }
+      // Entra com a chave. Isso também substitui um login anterior com conta Google.
+      await rpc.request('authenticate', { methodId: API_KEY_LOGIN, _meta: { 'api-key': apiKey } })
 
       // A sessão existe antes de retomar, para que os avisos do histórico sejam reconhecidos (e ignorados).
       const draft: Live = {
@@ -254,9 +280,7 @@ export const geminiAdapter: AgentAdapter = {
       if (resumeId && init.agentCapabilities?.loadSession) {
         session = { ...draft, replaying: true }
         try {
-          await withLogin(rpc, init, () =>
-            rpc.request('session/load', { sessionId: resumeId, cwd, mcpServers: [] })
-          )
+          await rpc.request('session/load', { sessionId: resumeId, cwd, mcpServers: [] })
           resumed = true
         } catch {
           emit({
@@ -269,9 +293,10 @@ export const geminiAdapter: AgentAdapter = {
       }
 
       if (!resumed) {
-        const created = await withLogin(rpc, init, () =>
-          rpc.request<NewSessionResponse>('session/new', { cwd, mcpServers: [] })
-        )
+        const created = await rpc.request<NewSessionResponse>('session/new', {
+          cwd,
+          mcpServers: []
+        })
         session = { ...(session ?? draft), acpSessionId: created.sessionId, replaying: false }
       }
 
@@ -281,7 +306,7 @@ export const geminiAdapter: AgentAdapter = {
     } catch (err) {
       rpc.close()
       const text = err instanceof Error ? err.message : String(err)
-      throw new Error(`Não foi possível iniciar o Gemini: ${text}`)
+      throw new Error(`Não foi possível iniciar o Gemini: ${friendly(text)}`)
     }
   },
 
@@ -308,7 +333,8 @@ export const geminiAdapter: AgentAdapter = {
       })
       .catch((err) => {
         if (session.stopped) return
-        session.emit({ type: 'error', sessionId, message: err instanceof Error ? err.message : String(err) })
+        const text = err instanceof Error ? err.message : String(err)
+        session.emit({ type: 'error', sessionId, message: friendly(text) })
       })
       .finally(() => {
         if (!session.stopped) session.emit({ type: 'status', sessionId, status: 'idle' })
