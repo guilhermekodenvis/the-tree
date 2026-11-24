@@ -1,17 +1,32 @@
 // Liga cada chamada da interface (window.api.*) ao serviço correspondente.
-import { ipcMain, type BrowserWindow } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type { AgentId } from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import { AgentManager } from './agents/manager'
 
-export function registerIpc(win: BrowserWindow): void {
-  // Eventos dos agentes sobem para a interface por este canal.
-  const agents = new AgentManager((event) => win.webContents.send('agents:event', event))
+export function registerIpc(): void {
+  // Eventos dos agentes sobem para todas as janelas abertas por este canal.
+  const agents = new AgentManager((event) => {
+    for (const win of BrowserWindow.getAllWindows()) win.webContents.send('agents:event', event)
+  })
 
   ipcMain.handle('projects:list', () => projects.list())
   ipcMain.handle('projects:add', (_e, path: string) => projects.add(path))
   ipcMain.handle('projects:remove', (_e, id: string) => projects.remove(id))
+  ipcMain.handle('projects:pick', async (event) => {
+    const options: Electron.OpenDialogOptions = {
+      title: 'Adicionar projeto',
+      buttonLabel: 'Adicionar',
+      properties: ['openDirectory']
+    }
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths.length === 0) return null
+    return projects.add(result.filePaths[0])
+  })
 
   ipcMain.handle('files:list', (_e, dir: string) => files.list(dir))
   ipcMain.handle('files:read', (_e, path: string) => files.read(path))
