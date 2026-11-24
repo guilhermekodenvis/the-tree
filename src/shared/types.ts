@@ -36,6 +36,8 @@ export interface FileEntry {
 export interface TreeApi {
   projects: {
     list(): Promise<Project[]>
+    /** Abre o seletor de pastas do sistema. Devolve null se o usuário cancelar. */
+    pick(): Promise<Project | null>
     add(path: string): Promise<Project>
     remove(id: string): Promise<void>
   }

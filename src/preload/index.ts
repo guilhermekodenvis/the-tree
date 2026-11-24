@@ -6,6 +6,7 @@ import type { AgentEvent, TreeApi } from '../shared/types'
 const api: TreeApi = {
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
+    pick: () => ipcRenderer.invoke('projects:pick'),
     add: (path) => ipcRenderer.invoke('projects:add', path),
     remove: (id) => ipcRenderer.invoke('projects:remove', id)
   },

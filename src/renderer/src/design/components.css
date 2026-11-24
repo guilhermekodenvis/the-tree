@@ -1,0 +1,238 @@
+/* DESIGN SYSTEM — COMPONENTES: peças reutilizáveis. Só usa tokens. */
+
+/* ---- Texto ---------------------------------------------------------------- */
+.text-caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  color: var(--color-text-secondary);
+}
+
+.text-subtitle {
+  font-family: var(--font-display);
+  font-size: var(--text-subtitle);
+  line-height: var(--leading-subtitle);
+  font-weight: var(--weight-semibold);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Ícone ---------------------------------------------------------------- */
+.icon {
+  width: var(--size-icon);
+  height: var(--size-icon);
+  flex-shrink: 0;
+}
+
+/* ---- Botão ---------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--size-control);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-stroke);
+  border-bottom-color: var(--color-stroke-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-control);
+  color: var(--color-text-primary);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.btn:hover {
+  background: var(--color-control-hover);
+}
+
+.btn:active {
+  background: var(--color-control-pressed);
+  color: var(--color-text-secondary);
+}
+
+.btn:disabled {
+  color: var(--color-text-disabled);
+  pointer-events: none;
+}
+
+.btn--accent {
+  background: var(--color-accent);
+  border-color: transparent;
+  color: var(--color-on-accent);
+}
+
+.btn--accent:hover {
+  background: var(--color-accent-hover);
+}
+
+.btn--accent:active {
+  background: var(--color-accent-pressed);
+  color: var(--color-on-accent);
+}
+
+/* Botão só com ícone, sem fundo até passar o mouse. */
+.btn--icon {
+  width: var(--size-control);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn--icon:hover {
+  background: var(--color-subtle-hover);
+  color: var(--color-text-primary);
+}
+
+.btn--icon:active {
+  background: var(--color-subtle-pressed);
+}
+
+.btn--danger:hover {
+  color: var(--color-danger);
+}
+
+/* ---- Item de navegação (lista da barra lateral) ---------------------------- */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-nav-item);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-text-primary);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.nav-item:hover {
+  background: var(--color-subtle-hover);
+}
+
+.nav-item:active {
+  background: var(--color-subtle-pressed);
+}
+
+.nav-item--selected {
+  background: var(--color-subtle-hover);
+}
+
+/* Marcador de seleção do Windows 11: pílula vertical na cor de destaque. */
+.nav-item--selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: translateY(-50%);
+}
+
+.nav-item__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-item__action {
+  opacity: 0;
+}
+
+.nav-item:hover .nav-item__action,
+.nav-item__action:focus-visible {
+  opacity: 1;
+}
+
+/* ---- Cartão --------------------------------------------------------------- */
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- Etiqueta ------------------------------------------------------------- */
+.badge {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-subtle-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+/* ---- Ponto colorido (identidade do agente) -------------------------------- */
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  flex-shrink: 0;
+  background: var(--color-text-tertiary);
+}
+
+.dot--claude {
+  background: var(--color-agent-claude);
+}
+
+.dot--codex {
+  background: var(--color-agent-codex);
+}
+
+.dot--gemini {
+  background: var(--color-agent-gemini);
+}
+
+/* ---- Estado vazio --------------------------------------------------------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.empty-state__icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-tertiary);
+}
+
+.empty-state__title {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+.empty-state__action {
+  margin-top: var(--space-3);
+}
+
+/* ---- Aviso de erro -------------------------------------------------------- */
+.notice {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-stroke);
+  color: var(--color-danger);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}

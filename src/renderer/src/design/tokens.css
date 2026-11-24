@@ -1,0 +1,104 @@
+/*
+ * DESIGN SYSTEM — TOKENS
+ * ----------------------------------------------------------------------------
+ * Fonte única de verdade do visual. Para mudar a cara do app, mude aqui.
+ * Nenhum outro arquivo deve ter cor, tamanho de fonte, raio ou espaçamento
+ * escritos à mão: tudo referencia estas variáveis.
+ *
+ * Cores usam light-dark(claro, escuro) e seguem o tema do Windows.
+ * Base visual: Windows 11 (Fluent 2).
+ *
+ * Exceção: as duas cores da moldura da janela (barra de título) moram em
+ * src/shared/theme.ts, porque o processo principal não lê CSS. Se mudar
+ * --color-bg-base aqui, mude lá também.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- Cores: superfícies ------------------------------------------------ */
+  --color-bg-base: light-dark(#f3f3f3, #202020); /* fundo da janela e da barra lateral */
+  --color-bg-layer: light-dark(#fbfbfb, #272727); /* área de trabalho, por cima da base */
+  --color-bg-card: light-dark(#ffffff, #2d2d2d); /* cartões dentro da área de trabalho */
+
+  /* ---- Cores: texto ------------------------------------------------------ */
+  --color-text-primary: light-dark(rgb(0 0 0 / 0.9), #ffffff);
+  --color-text-secondary: light-dark(rgb(0 0 0 / 0.61), rgb(255 255 255 / 0.79));
+  --color-text-tertiary: light-dark(rgb(0 0 0 / 0.45), rgb(255 255 255 / 0.54));
+  --color-text-disabled: light-dark(rgb(0 0 0 / 0.36), rgb(255 255 255 / 0.36));
+
+  /* ---- Cores: destaque (accent) ------------------------------------------ */
+  --color-accent: light-dark(#005fb8, #60cdff);
+  --color-accent-hover: light-dark(#1a6fbf, #5bbde9);
+  --color-accent-pressed: light-dark(#337fc6, #56aed3);
+  --color-on-accent: light-dark(#ffffff, #000000);
+
+  /* ---- Cores: perigo ----------------------------------------------------- */
+  --color-danger: light-dark(#c42b1c, #ff99a4);
+
+  /* ---- Cores: preenchimentos de controles -------------------------------- */
+  --color-control: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.06));
+  --color-control-hover: light-dark(rgb(249 249 249 / 0.5), rgb(255 255 255 / 0.08));
+  --color-control-pressed: light-dark(rgb(249 249 249 / 0.3), rgb(255 255 255 / 0.03));
+  --color-subtle-hover: light-dark(rgb(0 0 0 / 0.04), rgb(255 255 255 / 0.06));
+  --color-subtle-pressed: light-dark(rgb(0 0 0 / 0.025), rgb(255 255 255 / 0.04));
+
+  /* ---- Cores: contornos -------------------------------------------------- */
+  --color-stroke: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
+  --color-stroke-strong: light-dark(rgb(0 0 0 / 0.16), rgb(255 255 255 / 0.14));
+  --color-focus: light-dark(rgb(0 0 0 / 0.9), #ffffff);
+
+  /* ---- Cores: identidade de cada agente ---------------------------------- */
+  --color-agent-claude: light-dark(#c15f3c, #e08a6a);
+  --color-agent-codex: light-dark(#0f8a6c, #3fcfa8);
+  --color-agent-gemini: light-dark(#3367d6, #8ab4f8);
+
+  /* ---- Tipografia -------------------------------------------------------- */
+  --font-text: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI Variable', 'Segoe UI', system-ui,
+    sans-serif;
+  --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, monospace;
+
+  --text-caption: 12px;
+  --text-body: 14px;
+  --text-subtitle: 20px;
+  --text-title: 28px;
+
+  --leading-caption: 16px;
+  --leading-body: 20px;
+  --leading-subtitle: 28px;
+  --leading-title: 36px;
+
+  --weight-regular: 400;
+  --weight-semibold: 600;
+
+  /* ---- Espaçamento (grade de 4px) ---------------------------------------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* ---- Cantos ------------------------------------------------------------ */
+  --radius-control: 4px; /* botões, itens de lista */
+  --radius-surface: 8px; /* cartões, área de trabalho */
+  --radius-pill: 999px;
+
+  /* ---- Sombras ----------------------------------------------------------- */
+  --shadow-card: 0 2px 4px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.13));
+
+  /* ---- Movimento --------------------------------------------------------- */
+  --motion-fast: 83ms;
+  --motion-normal: 167ms;
+  --motion-ease: cubic-bezier(0, 0, 0, 1);
+
+  /* ---- Medidas do layout ------------------------------------------------- */
+  --size-titlebar: 40px; /* igual a TITLEBAR_HEIGHT em src/shared/theme.ts */
+  --size-sidebar: 280px;
+  --size-agents: 340px;
+  --size-control: 32px;
+  --size-nav-item: 52px;
+  --size-icon: 16px;
+}
