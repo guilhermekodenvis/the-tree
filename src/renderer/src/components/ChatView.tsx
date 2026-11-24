@@ -1,6 +1,7 @@
 // Conversa com um agente: histórico, pedidos de autorização e caixa de mensagem.
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import type { AgentId, ChatItem, SessionStatus } from '../../../shared/types'
+import { agentInfo, type Choice } from '../../../shared/agents'
+import type { AgentId, AgentSettings, ChatItem, SessionStatus } from '../../../shared/types'
 import type { Chat } from '../hooks/useConversations'
 import { Markdown } from './Markdown'
 import { Button } from './ui/Button'
@@ -14,6 +15,9 @@ interface Props {
   startError: string | null
   /** Aviso opcional no topo da conversa (ex.: falta a chave do Gemini). */
   banner?: ReactNode
+  /** Modelo e esforço da conversa. */
+  settings: AgentSettings
+  onSettingsChange(change: Partial<AgentSettings>): void
   /** Bypass ligado: os pedidos de autorização são aprovados sozinhos. */
   bypass: boolean
   onBypassChange(on: boolean): void
@@ -51,6 +55,8 @@ export function ChatView(props: Props) {
     starting,
     startError,
     banner,
+    settings,
+    onSettingsChange,
     bypass,
     onBypassChange,
     onSend,
@@ -68,6 +74,7 @@ export function ChatView(props: Props) {
     if (list && stickToBottom.current) list.scrollTop = list.scrollHeight
   }, [chat.items])
 
+  const info = agentInfo(agent)
   const busy = starting || chat.status === 'running' || chat.status === 'waiting'
   const canSend = draft.trim() !== '' && !busy
   const status = statusText(chat, starting)
@@ -97,6 +104,18 @@ export function ChatView(props: Props) {
             {agentName} · {status}
           </div>
         </div>
+        <ChoiceSelect
+          label="Modelo"
+          choices={info?.models ?? []}
+          value={settings.model}
+          onChange={(model) => onSettingsChange({ model })}
+        />
+        <ChoiceSelect
+          label="Esforço"
+          choices={info?.efforts ?? []}
+          value={settings.effort}
+          onChange={(effort) => onSettingsChange({ effort })}
+        />
         <button
           type="button"
           role="switch"
@@ -165,6 +184,36 @@ export function ChatView(props: Props) {
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * Seletor de modelo ou de esforço. Some quando o agente não oferece a escolha.
+ * Pode ser trocado a qualquer momento; vale a partir da próxima mensagem.
+ */
+function ChoiceSelect({
+  label,
+  choices,
+  value,
+  onChange
+}: {
+  label: string
+  choices: Choice[]
+  value: string | null
+  onChange(value: string): void
+}) {
+  if (choices.length === 0 || value === null) return null
+  return (
+    <label className="select" title={`${label}: vale a partir da próxima mensagem`}>
+      <span className="select__label">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {choices.map((choice) => (
+          <option key={choice.id} value={choice.id}>
+            {choice.label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 

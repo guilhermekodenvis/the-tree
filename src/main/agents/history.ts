@@ -7,7 +7,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { agentName } from '../../shared/agents'
 import { settleSaved } from '../../shared/chat'
-import type { AgentId, ChatItem, ConversationRecord } from '../../shared/types'
+import type { AgentId, AgentSettings, ChatItem, ConversationRecord } from '../../shared/types'
 
 const SAVE_DELAY_MS = 500
 
@@ -170,6 +170,15 @@ export async function setBypass(
 ): Promise<void> {
   await get(projectId, conversationId)
   update(projectId, conversationId, (c) => ({ ...c, bypass: on }))
+}
+
+export async function setSettings(
+  projectId: string,
+  conversationId: string,
+  settings: AgentSettings
+): Promise<void> {
+  await get(projectId, conversationId)
+  update(projectId, conversationId, (c) => ({ ...c, settings }))
 }
 
 export async function remove(projectId: string, conversationId: string): Promise<void> {

@@ -359,6 +359,9 @@ export const geminiAdapter: AgentAdapter = {
       })
   },
 
+  // O Gemini usa um modelo fixo (GEMINI_MODEL); não há o que trocar.
+  async configure() {},
+
   async respond(sessionId, requestId, allow) {
     const session = sessionOf(sessionId)
     const pending = session.pending.get(requestId)

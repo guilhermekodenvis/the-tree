@@ -44,6 +44,14 @@ export interface Conversation {
   name: string
   /** Bypass: os pedidos de autorização são aprovados sozinhos, sem perguntar. */
   bypass: boolean
+  /** Modelo e esforço escolhidos (já com os padrões do agente aplicados). */
+  settings: AgentSettings
+}
+
+/** Modelo e nível de esforço de uma conversa. null = o agente não oferece a escolha. */
+export interface AgentSettings {
+  model: string | null
+  effort: string | null
 }
 
 /** O que um agente emite enquanto trabalha. */
@@ -87,6 +95,8 @@ export interface ConversationRecord {
   resumeId?: string
   /** Bypass ligado (ver Conversation.bypass). Ausente em conversas antigas = desligado. */
   bypass?: boolean
+  /** Modelo e esforço escolhidos. Ausente em conversas antigas = padrão do agente. */
+  settings?: Partial<AgentSettings>
   createdAt: number
   updatedAt: number
 }
@@ -177,6 +187,15 @@ export interface TreeApi {
      * esperando resposta também são aprovados.
      */
     setBypass(projectId: string, conversationId: string, on: boolean): Promise<void>
+    /**
+     * Troca o modelo e/ou o esforço da conversa. Com o agente rodando, vale a
+     * partir da próxima mensagem. Devolve o que ficou valendo.
+     */
+    setSettings(
+      projectId: string,
+      conversationId: string,
+      settings: Partial<AgentSettings>
+    ): Promise<AgentSettings>
     /** Encerra e apaga todas as conversas do projeto (usado ao remover o projeto). */
     removeAll(projectId: string): Promise<void>
   }

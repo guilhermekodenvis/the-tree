@@ -5,7 +5,7 @@
 // mas qualquer escrita ou comando que precise de mais do que leitura vira um pedido
 // de autorização na interface ('on-request'). Mesmo que o modelo não peça, o sandbox
 // bloqueia a escrita.
-import type { AgentEvent } from '../../shared/types'
+import type { AgentEvent, AgentSettings } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
 import { connectCodex } from './codex-rpc'
 import type { IncomingNotification as ServerNotification, IncomingRequest as ServerRequest, JsonRpcProcess, RequestId } from './rpc'
@@ -32,6 +32,8 @@ interface Live {
   /** Um erro deste turno já foi mostrado; evita mostrar o mesmo erro duas vezes. */
   turnFailedShown: boolean
   stopped: boolean
+  /** Modelo e esforço, enviados em cada turno (o Codex aceita trocar a cada mensagem). */
+  settings: AgentSettings
 }
 
 const live = new Map<string, Live>()
@@ -221,7 +223,7 @@ function sessionOf(sessionId: string): Live {
 export const codexAdapter: AgentAdapter = {
   id: 'codex',
 
-  async start(sessionId, cwd, emit, resumeId) {
+  async start(sessionId, cwd, emit, resumeId, settings) {
     // A sessão só existe depois do aperto de mão; avisos que chegarem antes esperam na fila.
     let session: Live | null = null
     const early: (() => void)[] = []
@@ -275,7 +277,8 @@ export const codexAdapter: AgentAdapter = {
         streamed: new Set(),
         changes: new Map(),
         turnFailedShown: false,
-        stopped: false
+        stopped: false,
+        settings
       }
       live.set(sessionId, session)
       emit({ type: 'resume-id', sessionId, resumeId: result.thread.id })
@@ -292,9 +295,15 @@ export const codexAdapter: AgentAdapter = {
     session.emit({ type: 'status', sessionId, status: 'running' })
     const result = await session.rpc.request<{ turn: { id: string } }>('turn/start', {
       threadId: session.threadId,
-      input: [{ type: 'text', text: message, text_elements: [] }]
+      input: [{ type: 'text', text: message, text_elements: [] }],
+      ...(session.settings.model ? { model: session.settings.model } : {}),
+      ...(session.settings.effort ? { effort: session.settings.effort } : {})
     })
     session.turnId = result.turn.id
+  },
+
+  async configure(sessionId, settings) {
+    sessionOf(sessionId).settings = settings
   },
 
   async respond(sessionId, requestId, allow) {

@@ -1,6 +1,6 @@
 // Liga cada chamada da interface (window.api.*) ao serviço correspondente.
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import type { AgentId } from '../shared/types'
+import type { AgentId, AgentSettings } from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
@@ -82,6 +82,14 @@ export function registerIpc(): AgentManager {
   )
   ipcMain.handle('conversations:setBypass', (_e, projectId: string, id: string, on: boolean) =>
     agents.setBypass(projectId, id, on === true)
+  )
+  ipcMain.handle(
+    'conversations:setSettings',
+    (_e, projectId: string, id: string, settings: Partial<AgentSettings>) =>
+      agents.setSettings(projectId, id, {
+        ...(typeof settings?.model === 'string' ? { model: settings.model } : {}),
+        ...(typeof settings?.effort === 'string' ? { effort: settings.effort } : {})
+      })
   )
   ipcMain.handle('conversations:removeAll', (_e, projectId: string) => agents.removeAll(projectId))
 

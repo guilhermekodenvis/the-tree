@@ -7,7 +7,13 @@
 // de novo e retoma de onde parou.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { addUserMessage, applyEvent, setPermission } from '../../../shared/chat'
-import type { AgentId, ChatItem, Conversation, SessionStatus } from '../../../shared/types'
+import type {
+  AgentId,
+  AgentSettings,
+  ChatItem,
+  Conversation,
+  SessionStatus
+} from '../../../shared/types'
 import { messageOf } from '../lib/errors'
 
 export interface Chat {
@@ -32,6 +38,8 @@ export interface ConversationsState {
   move(projectId: string, conversationId: string, toIndex: number): Promise<void>
   /** Liga ou desliga a aprovação automática dos pedidos de autorização. */
   setBypass(projectId: string, conversationId: string, on: boolean): Promise<void>
+  /** Troca o modelo e/ou o esforço da conversa. */
+  setSettings(projectId: string, conversationId: string, settings: Partial<AgentSettings>): Promise<void>
   /** Apaga todas as conversas do projeto (ao remover o projeto). */
   removeAll(projectId: string): Promise<void>
 
@@ -220,6 +228,30 @@ export function useConversations(): ConversationsState {
     [guarded]
   )
 
+  const setSettings = useCallback(
+    (projectId: string, conversationId: string, change: Partial<AgentSettings>) =>
+      guarded(async () => {
+        const mark = (settings: (current: AgentSettings) => AgentSettings) =>
+          setLists((prev) => ({
+            ...prev,
+            [projectId]: (prev[projectId] ?? []).map((c) =>
+              c.id === conversationId ? { ...c, settings: settings(c.settings) } : c
+            )
+          }))
+        const before = listsRef.current[projectId]?.find((c) => c.id === conversationId)?.settings
+        // O seletor muda na hora; depois vale o que o processo principal confirmou.
+        mark((current) => ({ ...current, ...change }))
+        try {
+          const saved = await window.api.conversations.setSettings(projectId, conversationId, change)
+          mark(() => saved)
+        } catch (err) {
+          if (before) mark(() => before)
+          throw err
+        }
+      }),
+    [guarded]
+  )
+
   const removeAll = useCallback(async (projectId: string) => {
     const ids = (listsRef.current[projectId] ?? []).map((c) => c.id)
     await window.api.conversations.removeAll(projectId).catch(() => undefined)
@@ -319,6 +351,7 @@ export function useConversations(): ConversationsState {
     remove,
     move,
     setBypass,
+    setSettings,
     removeAll,
     chatOf: (conversationId) => chats[conversationId] ?? null,
     loadChat,

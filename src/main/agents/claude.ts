@@ -5,8 +5,14 @@
 // Cada sessão é um processo de vida longa: as mensagens do usuário entram por uma
 // fila e as respostas saem como um fluxo de eventos, traduzidos para AgentEvent.
 import { randomUUID } from 'node:crypto'
-import type { CanUseTool, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
-import type { AgentEvent } from '../../shared/types'
+import type {
+  CanUseTool,
+  EffortLevel,
+  Query,
+  SDKMessage,
+  SDKUserMessage
+} from '@anthropic-ai/claude-agent-sdk'
+import type { AgentEvent, AgentSettings } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
 import { clip, shortPath } from './describe'
 
@@ -207,7 +213,7 @@ function sessionOf(sessionId: string): Live {
 export const claudeAdapter: AgentAdapter = {
   id: 'claude',
 
-  async start(sessionId, cwd, emit, resumeId) {
+  async start(sessionId, cwd, emit, resumeId, settings) {
     // O SDK é um módulo ESM; o import dinâmico funciona a partir do processo principal.
     const { query } = await import('@anthropic-ai/claude-agent-sdk')
 
@@ -269,7 +275,10 @@ export const claudeAdapter: AgentAdapter = {
           // 'default' mantém as aprovações manuais: nada que altere o projeto roda
           // sem passar por canUseTool (salvo regras que você já liberou no Claude Code).
           permissionMode: 'default',
-          includePartialMessages: true
+          includePartialMessages: true,
+          // Modelo e esforço escolhidos na conversa (ver shared/agents.ts).
+          ...(settings.model ? { model: settings.model } : {}),
+          ...(settings.effort ? { effort: settings.effort as EffortLevel } : {})
         }
       })
     }
@@ -286,6 +295,15 @@ export const claudeAdapter: AgentAdapter = {
       parent_tool_use_id: null
     })
     session.emit({ type: 'status', sessionId, status: 'running' })
+  },
+
+  async configure(sessionId, settings: AgentSettings) {
+    const { query } = sessionOf(sessionId)
+    // O SDK troca os dois sem reiniciar o Claude Code; vale para a próxima mensagem.
+    if (settings.model) await query.setModel(settings.model)
+    if (settings.effort) {
+      await query.applyFlagSettings({ effortLevel: settings.effort as EffortLevel })
+    }
   },
 
   async respond(sessionId, requestId, allow) {

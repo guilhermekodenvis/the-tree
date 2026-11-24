@@ -1,20 +1,25 @@
 // Interface comum aos agentes. Cada um (Claude Code, Codex, Gemini) ganha um
 // adaptador que traduz a sua saída para AgentEvent.
-import type { AgentEvent, AgentId } from '../../shared/types'
+import type { AgentEvent, AgentId, AgentSettings } from '../../shared/types'
 
 export interface AgentAdapter {
   readonly id: AgentId
 
   /**
    * Inicia o agente na pasta do projeto. Com `resumeId`, retoma a conversa
-   * anterior (o id vem de um evento 'resume-id' emitido antes).
+   * anterior (o id vem de um evento 'resume-id' emitido antes). `settings` traz o
+   * modelo e o esforço escolhidos na conversa.
    */
   start(
     sessionId: string,
     cwd: string,
     emit: (event: AgentEvent) => void,
-    resumeId?: string
+    resumeId: string | undefined,
+    settings: AgentSettings
   ): Promise<void>
+
+  /** Troca o modelo e o esforço da sessão aberta; vale a partir da próxima mensagem. */
+  configure(sessionId: string, settings: AgentSettings): Promise<void>
 
   /** Envia uma mensagem do usuário para a sessão. */
   send(sessionId: string, message: string): Promise<void>

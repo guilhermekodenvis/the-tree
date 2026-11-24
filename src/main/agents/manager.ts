@@ -3,8 +3,17 @@
 // pode ter um agente rodando ao mesmo tempo: é assim que dá para usar Claude e
 // ChatGPT em paralelo.
 import { randomUUID } from 'node:crypto'
+import { resolveSettings } from '../../shared/agents'
 import { addUserMessage, applyEvent, setPermission } from '../../shared/chat'
-import type { AgentEvent, AgentId, AgentSession, ChatItem, Conversation, ConversationRecord } from '../../shared/types'
+import type {
+  AgentEvent,
+  AgentId,
+  AgentSession,
+  AgentSettings,
+  ChatItem,
+  Conversation,
+  ConversationRecord
+} from '../../shared/types'
 import type { AgentAdapter } from './adapter'
 import { claudeAdapter } from './claude'
 import { codexAdapter } from './codex'
@@ -24,7 +33,8 @@ function summary(projectId: string, record: ConversationRecord): Conversation {
     projectId,
     agent: record.agent,
     name: record.name,
-    bypass: record.bypass === true
+    bypass: record.bypass === true,
+    settings: resolveSettings(record.agent, record.settings)
   }
 }
 
@@ -73,6 +83,23 @@ export class AgentManager {
     for (const item of pending) this.autoApprove(session, item.id)
   }
 
+  async setSettings(
+    projectId: string,
+    conversationId: string,
+    change: Partial<AgentSettings>
+  ): Promise<AgentSettings> {
+    const record = await history.get(projectId, conversationId)
+    // Valores fora da lista do agente caem no padrão; nada desconhecido chega ao agente.
+    const settings = resolveSettings(record.agent, {
+      ...resolveSettings(record.agent, record.settings),
+      ...change
+    })
+    await history.setSettings(projectId, conversationId, settings)
+    const session = [...this.sessions.values()].find((s) => s.conversationId === conversationId)
+    if (session) await adapters[session.agent].configure(session.id, settings)
+    return settings
+  }
+
   /** Encerra e apaga todas as conversas do projeto. */
   async removeAll(projectId: string): Promise<void> {
     await this.stopWhere((s) => s.projectId === projectId)
@@ -113,7 +140,13 @@ export class AgentManager {
     }
 
     try {
-      await adapters[record.agent].start(session.id, project.path, emit, record.resumeId)
+      await adapters[record.agent].start(
+        session.id,
+        project.path,
+        emit,
+        record.resumeId,
+        resolveSettings(record.agent, record.settings)
+      )
     } catch (err) {
       this.sessions.delete(session.id)
       throw err
