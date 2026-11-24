@@ -1,10 +1,12 @@
 // Conversa com um agente: histórico, pedidos de autorização e caixa de mensagem.
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { agentInfo, type Choice } from '../../../shared/agents'
-import type { AgentId, AgentSettings, ChatItem, SessionStatus } from '../../../shared/types'
+import type { AgentId, AgentSettings, ChatItem, SessionStatus, Skill } from '../../../shared/types'
 import type { Chat } from '../hooks/useConversations'
+import { Composer } from './Composer'
 import { Markdown } from './Markdown'
 import { Button } from './ui/Button'
+import { Icon } from './ui/Icon'
 
 interface Props {
   chat: Chat
@@ -21,7 +23,9 @@ interface Props {
   /** Bypass ligado: os pedidos de autorização são aprovados sozinhos. */
   bypass: boolean
   onBypassChange(on: boolean): void
-  onSend(text: string): void
+  /** Skills que a conversa pode usar no menu "/". */
+  loadSkills(): Promise<Skill[]>
+  onSend(text: string, skills: Skill[]): void
   onRespond(requestId: string, allow: boolean): void
   onInterrupt(): void
 }
@@ -59,11 +63,11 @@ export function ChatView(props: Props) {
     onSettingsChange,
     bypass,
     onBypassChange,
+    loadSkills,
     onSend,
     onRespond,
     onInterrupt
   } = props
-  const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
 
@@ -76,23 +80,7 @@ export function ChatView(props: Props) {
 
   const info = agentInfo(agent)
   const busy = starting || chat.status === 'running' || chat.status === 'waiting'
-  const canSend = draft.trim() !== '' && !busy
   const status = statusText(chat, starting)
-
-  const submit = (): void => {
-    if (!canSend) return
-    stickToBottom.current = true
-    onSend(draft.trim())
-    setDraft('')
-  }
-
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>): void => {
-    // Enter envia; Shift+Enter quebra a linha.
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault()
-      submit()
-    }
-  }
 
   return (
     <div className="chat">
@@ -163,26 +151,17 @@ export function ChatView(props: Props) {
         )}
       </div>
 
-      <div className="chat__composer">
-        <textarea
-          className="field"
-          rows={3}
-          value={draft}
-          placeholder={`Mensagem para o ${agentName}`}
-          aria-label={`Mensagem para o ${agentName}`}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        {busy && !starting ? (
-          <Button icon="stop" onClick={onInterrupt}>
-            Parar
-          </Button>
-        ) : (
-          <Button variant="accent" icon="send" disabled={!canSend} onClick={submit}>
-            Enviar
-          </Button>
-        )}
-      </div>
+      <Composer
+        agentName={agentName}
+        busy={busy}
+        canInterrupt={busy && !starting}
+        loadSkills={loadSkills}
+        onSend={(text, skills) => {
+          stickToBottom.current = true
+          onSend(text, skills)
+        }}
+        onInterrupt={onInterrupt}
+      />
     </div>
   )
 }
@@ -226,7 +205,21 @@ function Item({
 }) {
   switch (item.kind) {
     case 'user':
-      return <div className="bubble bubble--user">{item.text}</div>
+      return (
+        <div className="bubble bubble--user">
+          {item.skills && item.skills.length > 0 && (
+            <div className="chip-row">
+              {item.skills.map((name) => (
+                <span key={name} className="chip chip--static">
+                  <Icon name="skill" />
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+          {item.text}
+        </div>
+      )
     case 'assistant':
       return <Markdown text={item.text} />
     case 'tool':

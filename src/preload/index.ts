@@ -41,6 +41,18 @@ const api: TreeApi = {
       remove: () => ipcRenderer.invoke('settings:geminiKey:remove')
     }
   },
+  skills: {
+    listGlobal: () => ipcRenderer.invoke('skills:listGlobal'),
+    listProject: (projectId) => ipcRenderer.invoke('skills:listProject', projectId),
+    available: (projectId) => ipcRenderer.invoke('skills:available', projectId),
+    pick: (kind, projectId) => ipcRenderer.invoke('skills:pick', kind, projectId),
+    add: (path, projectId) => ipcRenderer.invoke('skills:add', path, projectId),
+    remove: (id) => ipcRenderer.invoke('skills:remove', id),
+    importToProject: (projectId, skillId) =>
+      ipcRenderer.invoke('skills:importToProject', projectId, skillId),
+    removeFromProject: (projectId, skillId) =>
+      ipcRenderer.invoke('skills:removeFromProject', projectId, skillId)
+  },
   conversations: {
     list: (projectId) => ipcRenderer.invoke('conversations:list', projectId),
     items: (projectId, id) => ipcRenderer.invoke('conversations:items', projectId, id),
@@ -57,7 +69,8 @@ const api: TreeApi = {
   agents: {
     start: (projectId, conversationId) =>
       ipcRenderer.invoke('agents:start', projectId, conversationId),
-    send: (sessionId, message) => ipcRenderer.invoke('agents:send', sessionId, message),
+    send: (sessionId, message, skills) =>
+      ipcRenderer.invoke('agents:send', sessionId, message, skills ?? []),
     respond: (sessionId, requestId, allow) =>
       ipcRenderer.invoke('agents:respond', sessionId, requestId, allow),
     interrupt: (sessionId) => ipcRenderer.invoke('agents:interrupt', sessionId),

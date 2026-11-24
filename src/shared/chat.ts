@@ -5,8 +5,8 @@ import type { AgentEvent, ChatItem, PermissionState } from './types'
 
 const newId = (): string => crypto.randomUUID()
 
-export function addUserMessage(items: ChatItem[], text: string): ChatItem[] {
-  return [...items, { kind: 'user', id: newId(), text }]
+export function addUserMessage(items: ChatItem[], text: string, skills: string[] = []): ChatItem[] {
+  return [...items, { kind: 'user', id: newId(), text, ...(skills.length > 0 ? { skills } : {}) }]
 }
 
 export function setPermission(

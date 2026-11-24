@@ -23,6 +23,7 @@ export type IconName =
   | 'move'
   | 'up'
   | 'down'
+  | 'skill'
 
 const paths: Record<IconName, ReactNode> = {
   folder: (
@@ -61,6 +62,7 @@ const paths: Record<IconName, ReactNode> = {
   ),
   up: <path d="M8 13.25V2.75M3.75 7 8 2.75 12.25 7" />,
   down: <path d="M8 2.75v10.5M3.75 9 8 13.25 12.25 9" />,
+  skill: <path d="M9.25 1.75 3.75 9h4l-1 5.25L12.25 7h-4l1-5.25Z" />,
   dismiss: <path d="m3.5 3.5 9 9m0-9-9 9" />,
   tree: (
     <>

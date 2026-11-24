@@ -443,6 +443,7 @@
 }
 
 .chat__composer {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -1225,4 +1226,178 @@ button.group__title:hover {
 .key-card {
   width: 100%;
   max-width: 480px;
+}
+
+/* ---- Skills ------------------------------------------------------------------ */
+.skills-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.skills-tab__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.skills-tab__title {
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+}
+
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.skill-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.skill-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: var(--size-control);
+  height: var(--size-control);
+  border-radius: var(--radius-control);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.skill-card .card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.skill-card__name {
+  font-weight: var(--weight-semibold);
+}
+
+.skill-card__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+}
+
+.skill-card__missing {
+  color: var(--color-danger);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.skill-card__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.skill-card__remove {
+  flex-shrink: 0;
+}
+
+.popover--wide {
+  width: var(--size-popover-wide);
+  max-height: var(--size-skill-menu-height);
+  overflow-y: auto;
+}
+
+/* Menu "/" da conversa: abre para cima, sobre a lista de mensagens. */
+.skill-menu {
+  position: absolute;
+  bottom: calc(100% - var(--space-2));
+  left: var(--space-6);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: var(--size-popover-wide);
+  max-width: calc(100% - 2 * var(--space-6));
+  max-height: var(--size-skill-menu-height);
+  padding: var(--space-1);
+  overflow-y: auto;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-flyout);
+  box-shadow: var(--shadow-flyout);
+}
+
+.skill-menu__item[aria-selected='true'] {
+  background: var(--color-subtle-hover);
+}
+
+.skill-menu__item .badge {
+  flex-shrink: 0;
+}
+
+/* Etiquetas das skills escolhidas para a mensagem. */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-self: stretch;
+}
+
+.bubble .chip-row {
+  margin-bottom: var(--space-1);
+  white-space: normal;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  padding: 2px 2px 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+}
+
+.chip--static {
+  padding-right: var(--space-2);
+  background: var(--color-bg-card);
+}
+
+.chip__remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+}
+
+.chip__remove:hover {
+  background: var(--color-subtle-hover);
+}
+
+.chip__remove .icon {
+  width: 12px;
+  height: 12px;
 }

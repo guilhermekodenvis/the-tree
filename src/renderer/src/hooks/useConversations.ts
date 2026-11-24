@@ -12,7 +12,8 @@ import type {
   AgentSettings,
   ChatItem,
   Conversation,
-  SessionStatus
+  SessionStatus,
+  Skill
 } from '../../../shared/types'
 import { messageOf } from '../lib/errors'
 
@@ -49,7 +50,8 @@ export interface ConversationsState {
   errorOf(conversationId: string): string | null
   /** Erro em ações da lista (criar, renomear, excluir...). */
   listError: string | null
-  send(projectId: string, conversationId: string, text: string): Promise<void>
+  /** `skills`: skills escolhidas com "/" para esta mensagem. */
+  send(projectId: string, conversationId: string, text: string, skills?: Skill[]): Promise<void>
   respond(conversationId: string, requestId: string, allow: boolean): Promise<void>
   interrupt(conversationId: string): Promise<void>
 }
@@ -280,12 +282,16 @@ export function useConversations(): ConversationsState {
   )
 
   const send = useCallback(
-    async (projectId: string, conversationId: string, text: string) => {
+    async (projectId: string, conversationId: string, text: string, skills: Skill[] = []) => {
       const chat = chatsRef.current[conversationId] ?? emptyChat()
       updateChat(conversationId, (current) => ({
         ...current,
         loaded: true,
-        items: addUserMessage(current.items, text)
+        items: addUserMessage(
+          current.items,
+          text,
+          skills.map((s) => s.name)
+        )
       }))
 
       let sessionId = chat.sessionId
@@ -302,7 +308,11 @@ export function useConversations(): ConversationsState {
       }
 
       try {
-        await window.api.agents.send(sessionId, text)
+        await window.api.agents.send(
+          sessionId,
+          text,
+          skills.map((s) => s.id)
+        )
       } catch (err) {
         addError(conversationId, err)
       }

@@ -25,6 +25,31 @@ export interface ProjectsData {
   groups: ProjectGroup[]
 }
 
+/**
+ * Skill: instruções que o agente segue para fazer um tipo de tarefa. É uma pasta
+ * com SKILL.md ou um arquivo .md solto; o app só guarda onde ela está.
+ */
+export interface Skill {
+  id: string
+  /** Do cabeçalho do SKILL.md (name); sem ele, o nome da pasta ou do arquivo. */
+  name: string
+  description: string
+  /** Pasta da skill (com SKILL.md) ou o arquivo .md. */
+  path: string
+  /** null = global (vale em todos os projetos); senão, o projeto dono. */
+  projectId: string | null
+  /** O arquivo não está mais no disco. */
+  missing: boolean
+}
+
+/** Skills da aba Skills de um projeto. */
+export interface ProjectSkills {
+  /** Locais: só deste projeto. */
+  own: Skill[]
+  /** Globais que você trouxe para este projeto. */
+  imported: Skill[]
+}
+
 export type SessionStatus = 'idle' | 'running' | 'waiting' | 'error'
 
 /** Processo ativo de um agente, atendendo uma conversa. */
@@ -78,7 +103,8 @@ export type PermissionState = 'pending' | 'allowed' | 'denied' | 'cancelled' | '
 
 /** Um item da conversa como aparece na tela (e como fica salvo no histórico). */
 export type ChatItem =
-  | { kind: 'user'; id: string; text: string }
+  /** `skills`: nomes das skills usadas nesta mensagem. */
+  | { kind: 'user'; id: string; text: string; skills?: string[] }
   | { kind: 'assistant'; id: string; text: string }
   | { kind: 'tool'; id: string; name: string; detail: string }
   | { kind: 'permission'; id: string; title: string; detail: string; state: PermissionState }
@@ -170,6 +196,27 @@ export interface TreeApi {
       remove(): Promise<void>
     }
   }
+  skills: {
+    /** Skills globais, por nome. */
+    listGlobal(): Promise<Skill[]>
+    /** Skills locais e globais importadas do projeto. */
+    listProject(projectId: string): Promise<ProjectSkills>
+    /** O que uma conversa do projeto pode usar: locais, importadas e as demais globais. */
+    available(projectId: string): Promise<Skill[]>
+    /**
+     * Abre o seletor do Windows (pasta ou arquivo) e adiciona o que foi escolhido,
+     * como global (projectId null) ou local do projeto. Devolve [] se cancelar.
+     * Uma pasta com várias subpastas de skill adiciona todas.
+     */
+    pick(kind: 'folder' | 'file', projectId: string | null): Promise<Skill[]>
+    /** Adiciona a partir de um caminho já conhecido (mesmas regras do pick). */
+    add(path: string, projectId: string | null): Promise<Skill[]>
+    /** Tira a skill do app; o arquivo no disco não é apagado. */
+    remove(id: string): Promise<void>
+    /** Traz uma skill global para a aba Skills do projeto. */
+    importToProject(projectId: string, skillId: string): Promise<void>
+    removeFromProject(projectId: string, skillId: string): Promise<void>
+  }
   conversations: {
     /** Conversas do projeto, na ordem escolhida. Não inicia nenhum processo. */
     list(projectId: string): Promise<Conversation[]>
@@ -202,7 +249,8 @@ export interface TreeApi {
   agents: {
     /** Inicia o agente de uma conversa, retomando o que já foi dito nela. */
     start(projectId: string, conversationId: string): Promise<AgentSession>
-    send(sessionId: string, message: string): Promise<void>
+    /** `skills`: ids das skills que o agente deve seguir nesta mensagem. */
+    send(sessionId: string, message: string, skills?: string[]): Promise<void>
     /** Responde a um pedido de autorização (evento 'permission'). */
     respond(sessionId: string, requestId: string, allow: boolean): Promise<void>
     /** Interrompe a resposta em andamento; a conversa continua aberta. */

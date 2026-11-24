@@ -3,10 +3,11 @@
 import { Icon, type IconName } from './ui/Icon'
 import { IconButton } from './ui/Button'
 
-export type Section = 'projects'
+export type Section = 'projects' | 'skills'
 
 const ITEMS: { id: Section; label: string; icon: IconName }[] = [
-  { id: 'projects', label: 'Projetos', icon: 'folders' }
+  { id: 'projects', label: 'Projetos', icon: 'folders' },
+  { id: 'skills', label: 'Skills', icon: 'skill' }
 ]
 
 interface Props {

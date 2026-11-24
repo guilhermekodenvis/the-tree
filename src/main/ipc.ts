@@ -4,6 +4,7 @@ import type { AgentId, AgentSettings } from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
+import * as skills from './skills/store'
 import { AgentManager } from './agents/manager'
 import { hasSecret, removeSecret, setSecret } from './secrets'
 
@@ -19,7 +20,10 @@ export function registerIpc(): AgentManager {
   ipcMain.handle('projects:add', (_e, path: string, groupId: string | null) =>
     projects.add(path, groupId ?? null)
   )
-  ipcMain.handle('projects:remove', (_e, id: string) => projects.remove(id))
+  ipcMain.handle('projects:remove', async (_e, id: string) => {
+    await projects.remove(id)
+    await skills.removeProject(id)
+  })
   ipcMain.handle('projects:rename', (_e, id: string, name: string) =>
     projects.renameProject(id, name)
   )
@@ -64,6 +68,47 @@ export function registerIpc(): AgentManager {
   })
   ipcMain.handle('settings:geminiKey:remove', () => removeSecret('gemini-api-key'))
 
+  ipcMain.handle('skills:listGlobal', () => skills.listGlobal())
+  ipcMain.handle('skills:listProject', (_e, projectId: string) => skills.listProject(projectId))
+  ipcMain.handle('skills:available', (_e, projectId: string) => skills.available(projectId))
+  ipcMain.handle('skills:pick', async (event, kind: 'folder' | 'file', projectId: string | null) => {
+    if (projectId !== null && !(await projects.get(projectId))) {
+      throw new Error('Este projeto não existe mais.')
+    }
+    const options: Electron.OpenDialogOptions =
+      kind === 'file'
+        ? {
+            title: 'Adicionar skill (arquivo)',
+            buttonLabel: 'Adicionar',
+            properties: ['openFile'],
+            filters: [{ name: 'Instruções da skill', extensions: ['md', 'markdown', 'txt'] }]
+          }
+        : {
+            title: 'Adicionar skill (pasta com SKILL.md)',
+            buttonLabel: 'Adicionar',
+            properties: ['openDirectory']
+          }
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const result = win
+      ? await dialog.showOpenDialog(win, options)
+      : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths.length === 0) return []
+    return skills.add(result.filePaths[0], projectId ?? null)
+  })
+  ipcMain.handle('skills:add', async (_e, path: string, projectId: string | null) => {
+    if (projectId !== null && !(await projects.get(projectId))) {
+      throw new Error('Este projeto não existe mais.')
+    }
+    return skills.add(path, projectId ?? null)
+  })
+  ipcMain.handle('skills:remove', (_e, id: string) => skills.remove(id))
+  ipcMain.handle('skills:importToProject', (_e, projectId: string, skillId: string) =>
+    skills.importToProject(projectId, skillId)
+  )
+  ipcMain.handle('skills:removeFromProject', (_e, projectId: string, skillId: string) =>
+    skills.removeFromProject(projectId, skillId)
+  )
+
   ipcMain.handle('conversations:list', (_e, projectId: string) => agents.list(projectId))
   ipcMain.handle('conversations:items', (_e, projectId: string, id: string) =>
     agents.items(projectId, id)
@@ -96,8 +141,12 @@ export function registerIpc(): AgentManager {
   ipcMain.handle('agents:start', (_e, projectId: string, conversationId: string) =>
     agents.start(projectId, conversationId)
   )
-  ipcMain.handle('agents:send', (_e, sessionId: string, message: string) =>
-    agents.send(sessionId, message)
+  ipcMain.handle('agents:send', (_e, sessionId: string, message: string, skillIds: unknown) =>
+    agents.send(
+      sessionId,
+      message,
+      Array.isArray(skillIds) ? skillIds.filter((id): id is string => typeof id === 'string') : []
+    )
   )
   ipcMain.handle('agents:respond', (_e, sessionId: string, requestId: string, allow: boolean) =>
     agents.respond(sessionId, requestId, allow)

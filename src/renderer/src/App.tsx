@@ -7,9 +7,13 @@ import { useProjects } from './hooks/useProjects'
 import { NavMenu } from './components/NavMenu'
 import { ProjectScreen, type ProjectTab } from './components/ProjectScreen'
 import { ProjectsScreen } from './components/ProjectsScreen'
+import { SkillsScreen } from './components/SkillsScreen'
 import { Icon } from './components/ui/Icon'
 
-type View = { screen: 'projects' } | { screen: 'project'; projectId: string; tab: ProjectTab }
+type View =
+  | { screen: 'projects' }
+  | { screen: 'skills' }
+  | { screen: 'project'; projectId: string; tab: ProjectTab }
 
 const NAV_KEY = 'the-tree:nav-collapsed'
 
@@ -58,13 +62,15 @@ export function App() {
         The Tree
       </header>
       <NavMenu
-        active="projects"
+        active={view.screen === 'skills' ? 'skills' : 'projects'}
         collapsed={collapsed}
         onToggle={toggleNav}
-        onNavigate={() => setView({ screen: 'projects' })}
+        onNavigate={(section) => setView({ screen: section })}
       />
       <div className="workspace">
-        {view.screen === 'project' && current ? (
+        {view.screen === 'skills' ? (
+          <SkillsScreen />
+        ) : view.screen === 'project' && current ? (
           <ProjectScreen
             key={current.id}
             project={current}

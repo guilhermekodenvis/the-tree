@@ -20,6 +20,8 @@ import { codexAdapter } from './codex'
 import { geminiAdapter } from './gemini'
 import * as history from './history'
 import * as projects from '../projects/store'
+import { withSkills } from '../skills/prompt'
+import * as skillStore from '../skills/store'
 
 const adapters: Record<AgentId, AgentAdapter> = {
   claude: claudeAdapter,
@@ -154,13 +156,23 @@ export class AgentManager {
     return session
   }
 
-  async send(sessionId: string, message: string): Promise<void> {
+  /**
+   * Envia a mensagem. Com skills, o texto delas vai junto para o agente; o
+   * histórico guarda só a sua mensagem e os nomes das skills.
+   */
+  async send(sessionId: string, message: string, skillIds: string[] = []): Promise<void> {
     const session = this.sessionOf(sessionId)
+    // Lê as skills antes de gravar: se uma sumiu do disco, nada é enviado.
+    const skills = await skillStore.contents(session.projectId, skillIds)
     history.update(session.projectId, session.conversationId, (c) => ({
       ...c,
-      items: addUserMessage(c.items, message)
+      items: addUserMessage(
+        c.items,
+        message,
+        skills.map((s) => s.name)
+      )
     }))
-    await adapters[session.agent].send(sessionId, message)
+    await adapters[session.agent].send(sessionId, withSkills(message, skills))
   }
 
   async respond(sessionId: string, requestId: string, allow: boolean): Promise<void> {
