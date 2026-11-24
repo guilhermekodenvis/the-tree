@@ -5,6 +5,7 @@
 // Cada sessão é um processo de vida longa: as mensagens do usuário entram por uma
 // fila e as respostas saem como um fluxo de eventos, traduzidos para AgentEvent.
 import { randomUUID } from 'node:crypto'
+import { isAbsolute, relative } from 'node:path'
 import type { CanUseTool, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import type { AgentEvent } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
@@ -49,6 +50,7 @@ interface Live {
   queue: MessageQueue
   query: Query
   emit: Emit
+  cwd: string
   /** Pedidos de autorização aguardando resposta do usuário. */
   pending: Map<string, (allow: boolean) => void>
   stopped: boolean
@@ -65,18 +67,76 @@ const ERROR_HELP: Record<string, string> = {
   overloaded: 'O serviço do Claude está sobrecarregado. Tente de novo em instantes.'
 }
 
-/** Resumo curto do que a ferramenta vai fazer, para mostrar na conversa. */
-function describe(input: Record<string, unknown>): string {
+const PATH_FIELDS = new Set(['file_path', 'path', 'notebook_path'])
+
+/** Caminho relativo ao projeto quando o arquivo está dentro dele; senão, o caminho inteiro. */
+function shortPath(path: string, cwd: string): string {
+  const rel = relative(cwd, path)
+  return rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : path
+}
+
+function clip(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max)}
+… (cortado: ${text.length} caracteres no total)` : text
+}
+
+/** Resumo de uma linha do que a ferramenta vai fazer, para mostrar na conversa. */
+function describe(input: Record<string, unknown>, cwd: string): string {
   for (const field of ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description']) {
     const value = input[field]
-    if (typeof value === 'string' && value) return value
+    if (typeof value === 'string' && value) {
+      return PATH_FIELDS.has(field) ? shortPath(value, cwd) : value
+    }
   }
-  const json = JSON.stringify(input)
-  return json.length > 300 ? `${json.slice(0, 300)}…` : json
+  return clip(JSON.stringify(input), 300)
+}
+
+/** Títulos em português para os pedidos de autorização mais comuns. */
+const REQUEST_TITLE: Record<string, string> = {
+  Write: 'O Claude quer criar ou sobrescrever um arquivo',
+  Edit: 'O Claude quer editar um arquivo',
+  NotebookEdit: 'O Claude quer editar um notebook',
+  Bash: 'O Claude quer rodar um comando',
+  PowerShell: 'O Claude quer rodar um comando',
+  WebFetch: 'O Claude quer acessar uma página da web',
+  WebSearch: 'O Claude quer pesquisar na web'
+}
+
+/**
+ * Descrição completa de um pedido de autorização: além do alvo, mostra o que
+ * será gravado ou trocado, para a decisão não ser feita às cegas.
+ */
+function describeRequest(toolName: string, input: Record<string, unknown>, cwd: string): string {
+  const text = (field: string): string | null =>
+    typeof input[field] === 'string' ? (input[field] as string) : null
+  const path = text('file_path')
+
+  if (toolName === 'Write' && path !== null) {
+    return clip(`${shortPath(path, cwd)}
+
+${text('content') ?? ''}`, 4000)
+  }
+  if (toolName === 'Edit' && path !== null) {
+    const before = text('old_string') ?? ''
+    const after = text('new_string') ?? ''
+    return clip(`${shortPath(path, cwd)}
+
+Trocar:
+${before}
+
+Por:
+${after}`, 4000)
+  }
+  return clip(describe(input, cwd), 4000)
 }
 
 /** Traduz uma mensagem do SDK em eventos da interface. */
-function translate(sessionId: string, state: { messageId: string }, message: SDKMessage, emit: Emit): void {
+function translate(
+  sessionId: string,
+  state: { messageId: string; cwd: string },
+  message: SDKMessage,
+  emit: Emit
+): void {
   // Mensagens de subagentes ficam de fora: a conversa mostra só o agente principal.
   if ('parent_tool_use_id' in message && message.parent_tool_use_id) return
 
@@ -104,7 +164,7 @@ function translate(sessionId: string, state: { messageId: string }, message: SDK
             sessionId,
             id: block.id,
             name: block.name,
-            detail: describe(block.input as Record<string, unknown>)
+            detail: describe(block.input as Record<string, unknown>, state.cwd)
           })
         }
       }
@@ -129,7 +189,7 @@ function translate(sessionId: string, state: { messageId: string }, message: SDK
 }
 
 async function consume(sessionId: string, session: Live): Promise<void> {
-  const state = { messageId: '' }
+  const state = { messageId: '', cwd: session.cwd }
   try {
     for await (const message of session.query) {
       translate(sessionId, state, message, session.emit)
@@ -192,8 +252,11 @@ export const claudeAdapter: AgentAdapter = {
           type: 'permission',
           sessionId,
           requestId,
-          title: options.title ?? `O Claude quer usar ${options.displayName ?? toolName}`,
-          detail: describe(input)
+          title:
+            options.title ??
+            REQUEST_TITLE[toolName] ??
+            `O Claude quer usar ${options.displayName ?? toolName}`,
+          detail: describeRequest(toolName, input, cwd)
         })
         emit({ type: 'status', sessionId, status: 'waiting' })
       })
@@ -202,6 +265,7 @@ export const claudeAdapter: AgentAdapter = {
       queue,
       pending,
       emit,
+      cwd,
       stopped: false,
       query: query({
         prompt: queue,
