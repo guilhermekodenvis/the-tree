@@ -5,9 +5,24 @@ export type AgentId = 'claude' | 'codex' | 'gemini'
 
 export interface Project {
   id: string
+  /** Nome mostrado no app. Começa igual ao da pasta, mas pode ser trocado. */
   name: string
   /** Pasta do projeto no disco. */
   path: string
+  /** Grupo do projeto; null = "Sem grupo". */
+  groupId: string | null
+}
+
+/** Grupo de projetos, só para organizar a tela de projetos. */
+export interface ProjectGroup {
+  id: string
+  name: string
+}
+
+/** Projetos e grupos, cada lista na ordem escolhida. */
+export interface ProjectsData {
+  projects: Project[]
+  groups: ProjectGroup[]
 }
 
 export type SessionStatus = 'idle' | 'running' | 'waiting' | 'error'
@@ -103,11 +118,26 @@ export interface FilesChanged {
 /** API que a interface enxerga em `window.api` (implementada no preload). */
 export interface TreeApi {
   projects: {
-    list(): Promise<Project[]>
-    /** Abre o seletor de pastas do sistema. Devolve null se o usuário cancelar. */
-    pick(): Promise<Project | null>
-    add(path: string): Promise<Project>
+    list(): Promise<ProjectsData>
+    /**
+     * Abre o seletor de pastas do sistema e adiciona a pasta escolhida ao grupo
+     * indicado (null = "Sem grupo"). Devolve null se o usuário cancelar.
+     */
+    pick(groupId: string | null): Promise<Project | null>
+    add(path: string, groupId?: string | null): Promise<Project>
     remove(id: string): Promise<void>
+    /** Troca o nome mostrado no app; a pasta no disco não muda. */
+    rename(id: string, name: string): Promise<void>
+    /** Põe o projeto em outro grupo (null = "Sem grupo"). */
+    move(id: string, groupId: string | null): Promise<void>
+  }
+  groups: {
+    /** Sem nome, cria "Novo grupo" (numerado se já existir). */
+    create(name?: string): Promise<ProjectGroup>
+    rename(id: string, name: string): Promise<void>
+    /** Apaga o grupo; os projetos dele vão para "Sem grupo". */
+    remove(id: string): Promise<void>
+    reorder(ids: string[]): Promise<void>
   }
   files: {
     // Os caminhos são sempre relativos à pasta do projeto ('' é a raiz).

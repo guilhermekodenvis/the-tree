@@ -13,9 +13,17 @@ function listen<T>(channel: string, listener: (payload: T) => void): () => void 
 const api: TreeApi = {
   projects: {
     list: () => ipcRenderer.invoke('projects:list'),
-    pick: () => ipcRenderer.invoke('projects:pick'),
-    add: (path) => ipcRenderer.invoke('projects:add', path),
-    remove: (id) => ipcRenderer.invoke('projects:remove', id)
+    pick: (groupId) => ipcRenderer.invoke('projects:pick', groupId),
+    add: (path, groupId) => ipcRenderer.invoke('projects:add', path, groupId ?? null),
+    remove: (id) => ipcRenderer.invoke('projects:remove', id),
+    rename: (id, name) => ipcRenderer.invoke('projects:rename', id, name),
+    move: (id, groupId) => ipcRenderer.invoke('projects:move', id, groupId)
+  },
+  groups: {
+    create: (name) => ipcRenderer.invoke('groups:create', name),
+    rename: (id, name) => ipcRenderer.invoke('groups:rename', id, name),
+    remove: (id) => ipcRenderer.invoke('groups:remove', id),
+    reorder: (ids) => ipcRenderer.invoke('groups:reorder', ids)
   },
   files: {
     list: (projectId, dir) => ipcRenderer.invoke('files:list', projectId, dir),

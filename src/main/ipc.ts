@@ -16,9 +16,21 @@ export function registerIpc(): AgentManager {
   const agents = new AgentManager((event) => broadcast('agents:event', event))
 
   ipcMain.handle('projects:list', () => projects.list())
-  ipcMain.handle('projects:add', (_e, path: string) => projects.add(path))
+  ipcMain.handle('projects:add', (_e, path: string, groupId: string | null) =>
+    projects.add(path, groupId ?? null)
+  )
   ipcMain.handle('projects:remove', (_e, id: string) => projects.remove(id))
-  ipcMain.handle('projects:pick', async (event) => {
+  ipcMain.handle('projects:rename', (_e, id: string, name: string) =>
+    projects.renameProject(id, name)
+  )
+  ipcMain.handle('projects:move', (_e, id: string, groupId: string | null) =>
+    projects.moveProject(id, groupId ?? null)
+  )
+  ipcMain.handle('groups:create', (_e, name?: string) => projects.createGroup(name))
+  ipcMain.handle('groups:rename', (_e, id: string, name: string) => projects.renameGroup(id, name))
+  ipcMain.handle('groups:remove', (_e, id: string) => projects.removeGroup(id))
+  ipcMain.handle('groups:reorder', (_e, ids: string[]) => projects.reorderGroups(ids))
+  ipcMain.handle('projects:pick', async (event, groupId: string | null) => {
     const options: Electron.OpenDialogOptions = {
       title: 'Adicionar projeto',
       buttonLabel: 'Adicionar',
@@ -29,7 +41,7 @@ export function registerIpc(): AgentManager {
       ? await dialog.showOpenDialog(win, options)
       : await dialog.showOpenDialog(options)
     if (result.canceled || result.filePaths.length === 0) return null
-    return projects.add(result.filePaths[0])
+    return projects.add(result.filePaths[0], groupId ?? null)
   })
 
   ipcMain.handle('files:list', (_e, projectId: string, dir: string) => files.list(projectId, dir))

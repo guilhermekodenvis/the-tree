@@ -816,16 +816,144 @@
   font-weight: var(--weight-semibold);
 }
 
-.project-card__remove {
+/* Ações do card (renomear, mover, remover): aparecem ao passar o mouse. */
+.project-card__tools {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
+  display: flex;
+  gap: 2px;
   opacity: 0;
 }
 
-.project-card:hover .project-card__remove,
-.project-card__remove:focus-visible {
+.project-card:hover .project-card__tools,
+.project-card__tools:focus-within,
+.project-card--menu .project-card__tools {
   opacity: 1;
+}
+
+.project-card--dragging {
+  opacity: 0.4;
+}
+
+.project-card--rename {
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+}
+
+.project-card--rename .project-card__icon {
+  align-self: flex-start;
+}
+
+.project-card__input {
+  height: 28px;
+  padding: 0 var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---- Grupos de projetos ------------------------------------------------------- */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: calc(var(--space-2) * -1);
+  padding: var(--space-2);
+  border: 1px dashed transparent;
+  border-radius: var(--radius-surface);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+/* Área onde o card arrastado vai cair. */
+.group--drop {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.group__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-control);
+}
+
+.group__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-display);
+  font-size: var(--text-subtitle);
+  line-height: var(--leading-subtitle);
+  font-weight: var(--weight-semibold);
+}
+
+button.group__title:hover {
+  background: var(--color-subtle-hover);
+}
+
+/* Sem seta: o recuo alinha o texto com o dos grupos que têm seta. */
+.group__title--plain {
+  padding-left: calc(var(--space-1) + var(--size-icon) + var(--space-2));
+  color: var(--color-text-secondary);
+}
+
+.group__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: transform var(--motion-normal) var(--motion-ease);
+}
+
+.group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.group__input {
+  width: min(100%, 360px);
+  height: var(--size-control);
+  padding: 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--text-subtitle);
+  font-weight: var(--weight-semibold);
+}
+
+.group__actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+}
+
+.group__header:hover .group__actions,
+.group__actions:focus-within {
+  opacity: 1;
+}
+
+.group__confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.group-empty {
+  padding: var(--space-4);
+  border: 1px dashed var(--color-stroke-strong);
+  border-radius: var(--radius-surface);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  text-align: center;
+}
+
+.screen__actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .project-card--confirm {
@@ -1012,6 +1140,17 @@
 
 .popover__item-name {
   font-weight: var(--weight-semibold);
+}
+
+.popover__hint {
+  padding: 0 var(--space-3) var(--space-1);
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.popover__check {
+  margin-left: auto;
 }
 
 .popover__divider {
