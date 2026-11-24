@@ -5,7 +5,7 @@ import * as projects from './projects/store'
 import * as files from './files/service'
 import { AgentManager } from './agents/manager'
 
-export function registerIpc(): void {
+export function registerIpc(): AgentManager {
   // Eventos dos agentes sobem para todas as janelas abertas por este canal.
   const agents = new AgentManager((event) => {
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('agents:event', event)
@@ -42,5 +42,10 @@ export function registerIpc(): void {
   ipcMain.handle('agents:send', (_e, sessionId: string, message: string) =>
     agents.send(sessionId, message)
   )
+  ipcMain.handle('agents:respond', (_e, sessionId: string, requestId: string, allow: boolean) =>
+    agents.respond(sessionId, requestId, allow)
+  )
   ipcMain.handle('agents:stop', (_e, sessionId: string) => agents.stop(sessionId))
+
+  return agents
 }

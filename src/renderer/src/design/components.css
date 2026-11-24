@@ -76,6 +76,11 @@
   color: var(--color-on-accent);
 }
 
+.btn--accent:disabled {
+  background: var(--color-accent-disabled);
+  color: var(--color-on-accent-disabled);
+}
+
 /* Botão só com ícone, sem fundo até passar o mouse. */
 .btn--icon {
   width: var(--size-control);
@@ -307,4 +312,145 @@
   tab-size: 2;
   user-select: text;
   cursor: text;
+}
+
+/* ---- Campo de texto ------------------------------------------------------- */
+.field {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-stroke);
+  border-bottom-color: var(--color-stroke-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-control);
+  color: var(--color-text-primary);
+  font: inherit;
+  resize: none;
+  user-select: text;
+}
+
+.field::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Foco no estilo do Windows 11: linha de destaque na base do campo. */
+.field:focus-visible {
+  outline: none;
+  border-bottom-color: var(--color-accent);
+  box-shadow: 0 1px 0 var(--color-accent);
+}
+
+.field:disabled {
+  color: var(--color-text-disabled);
+}
+
+/* ---- Conversa com agente --------------------------------------------------- */
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chat__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--color-stroke);
+}
+
+.chat__title {
+  font-weight: var(--weight-semibold);
+}
+
+.chat__messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4) var(--space-6);
+  overflow-y: auto;
+}
+
+.chat__composer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-6) var(--space-4);
+  border-top: 1px solid var(--color-stroke);
+}
+
+/* Balão de mensagem: o do agente é texto corrido; o do usuário fica destacado à direita. */
+.bubble {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+
+.bubble--user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-surface);
+  background: var(--color-accent-subtle);
+}
+
+/* Linha discreta para cada ferramenta que o agente usa. */
+.tool-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.tool-line__name {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-weight: var(--weight-semibold);
+}
+
+/* Pedido de autorização: precisa chamar atenção sem parecer erro. */
+.permission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-stroke-strong);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.permission__title {
+  font-weight: var(--weight-semibold);
+}
+
+.permission__detail {
+  max-height: 160px;
+  margin: 0;
+  padding: var(--space-2);
+  overflow: auto;
+  border-radius: var(--radius-control);
+  background: var(--color-subtle-hover);
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.permission__actions {
+  display: flex;
+  gap: var(--space-2);
 }

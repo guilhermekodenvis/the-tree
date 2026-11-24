@@ -22,9 +22,16 @@ export interface AgentSession {
 
 /** O que um agente emite enquanto trabalha. */
 export type AgentEvent =
-  | { type: 'text'; sessionId: string; text: string }
+  /** Pedaço de texto da resposta. Pedaços com a mesma `key` formam um mesmo bloco. */
+  | { type: 'text'; sessionId: string; key: string; text: string }
+  /** O agente começou a usar uma ferramenta (ler arquivo, rodar comando...). */
+  | { type: 'tool'; sessionId: string; id: string; name: string; detail: string }
+  /** O agente pede autorização para uma ação; responda com agents.respond. */
+  | { type: 'permission'; sessionId: string; requestId: string; title: string; detail: string }
+  /** Um pedido de autorização deixou de valer sem resposta (ex.: o turno foi cancelado). */
+  | { type: 'permission-cancelled'; sessionId: string; requestId: string }
   | { type: 'status'; sessionId: string; status: SessionStatus }
-  | { type: 'file-changed'; sessionId: string; path: string }
+  | { type: 'error'; sessionId: string; message: string }
 
 export interface FileEntry {
   name: string
@@ -57,6 +64,8 @@ export interface TreeApi {
   agents: {
     start(projectId: string, agent: AgentId): Promise<AgentSession>
     send(sessionId: string, message: string): Promise<void>
+    /** Responde a um pedido de autorização (evento 'permission'). */
+    respond(sessionId: string, requestId: string, allow: boolean): Promise<void>
     stop(sessionId: string): Promise<void>
     /** Devolve uma função para cancelar a escuta. */
     onEvent(listener: (event: AgentEvent) => void): () => void

@@ -12,7 +12,7 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 1120,
+    minWidth: 1200,
     minHeight: 600,
     title: 'The Tree',
     backgroundColor: chrome().background,
@@ -52,8 +52,11 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
-  registerIpc()
+  const agents = registerIpc()
   createWindow()
+
+  // Ao sair, encerra os processos dos agentes para não deixar nada rodando.
+  app.on('before-quit', () => void agents.stopAll())
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

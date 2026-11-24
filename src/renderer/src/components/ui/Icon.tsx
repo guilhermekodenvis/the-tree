@@ -7,6 +7,7 @@ export type IconName =
   | 'document'
   | 'chevron'
   | 'refresh'
+  | 'send'
   | 'add'
   | 'dismiss'
   | 'tree'
@@ -20,6 +21,7 @@ const paths: Record<IconName, ReactNode> = {
   ),
   chevron: <path d="m6 3.75 4.25 4.25L6 12.25" />,
   refresh: <path d="M13.25 8a5.25 5.25 0 1 1-1.54-3.71M13.25 2.5v2.75H10.5" />,
+  send: <path d="M2.25 2.5 14 8 2.25 13.5 4 8 2.25 2.5ZM4 8h5" />,
   add: <path d="M8 2.75v10.5M2.75 8h10.5" />,
   dismiss: <path d="m3.5 3.5 9 9m0-9-9 9" />,
   tree: (

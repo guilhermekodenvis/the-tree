@@ -13,6 +13,10 @@ export const codexAdapter: AgentAdapter = {
     throw new Error('codex: send ainda não implementado')
   },
 
+  async respond(_sessionId, _requestId, _allow) {
+    throw new Error('codex: respond ainda não implementado')
+  },
+
   async stop(_sessionId) {
     throw new Error('codex: stop ainda não implementado')
   }

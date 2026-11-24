@@ -33,9 +33,17 @@ export class AgentManager {
     await this.adapterOf(sessionId).send(sessionId, message)
   }
 
+  async respond(sessionId: string, requestId: string, allow: boolean): Promise<void> {
+    await this.adapterOf(sessionId).respond(sessionId, requestId, allow)
+  }
+
   async stop(sessionId: string): Promise<void> {
     await this.adapterOf(sessionId).stop(sessionId)
     this.sessions.delete(sessionId)
+  }
+
+  async stopAll(): Promise<void> {
+    await Promise.allSettled([...this.sessions.keys()].map((id) => this.stop(id)))
   }
 
   private adapterOf(sessionId: string): AgentAdapter {

@@ -13,6 +13,10 @@ export const geminiAdapter: AgentAdapter = {
     throw new Error('gemini: send ainda não implementado')
   },
 
+  async respond(_sessionId, _requestId, _allow) {
+    throw new Error('gemini: respond ainda não implementado')
+  },
+
   async stop(_sessionId) {
     throw new Error('gemini: stop ainda não implementado')
   }

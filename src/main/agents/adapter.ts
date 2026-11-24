@@ -11,6 +11,9 @@ export interface AgentAdapter {
   /** Envia uma mensagem do usuário para a sessão. */
   send(sessionId: string, message: string): Promise<void>
 
+  /** Responde a um pedido de autorização feito pelo agente. */
+  respond(sessionId: string, requestId: string, allow: boolean): Promise<void>
+
   /** Encerra o processo da sessão. */
   stop(sessionId: string): Promise<void>
 }

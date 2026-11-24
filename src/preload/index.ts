@@ -19,6 +19,8 @@ const api: TreeApi = {
   agents: {
     start: (projectId, agent) => ipcRenderer.invoke('agents:start', projectId, agent),
     send: (sessionId, message) => ipcRenderer.invoke('agents:send', sessionId, message),
+    respond: (sessionId, requestId, allow) =>
+      ipcRenderer.invoke('agents:respond', sessionId, requestId, allow),
     stop: (sessionId) => ipcRenderer.invoke('agents:stop', sessionId),
     onEvent: (listener) => {
       const handler = (_e: unknown, event: AgentEvent): void => listener(event)
