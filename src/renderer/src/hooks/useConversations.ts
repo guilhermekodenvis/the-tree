@@ -30,6 +30,8 @@ export interface ConversationsState {
   remove(projectId: string, conversationId: string): Promise<void>
   /** Move a conversa para a posição `toIndex` da lista. */
   move(projectId: string, conversationId: string, toIndex: number): Promise<void>
+  /** Liga ou desliga a aprovação automática dos pedidos de autorização. */
+  setBypass(projectId: string, conversationId: string, on: boolean): Promise<void>
   /** Apaga todas as conversas do projeto (ao remover o projeto). */
   removeAll(projectId: string): Promise<void>
 
@@ -196,6 +198,28 @@ export function useConversations(): ConversationsState {
     [guarded]
   )
 
+  const setBypass = useCallback(
+    (projectId: string, conversationId: string, on: boolean) =>
+      guarded(async () => {
+        const mark = (value: boolean) =>
+          setLists((prev) => ({
+            ...prev,
+            [projectId]: (prev[projectId] ?? []).map((c) =>
+              c.id === conversationId ? { ...c, bypass: value } : c
+            )
+          }))
+        // O interruptor muda na hora; volta se a gravação falhar.
+        mark(on)
+        try {
+          await window.api.conversations.setBypass(projectId, conversationId, on)
+        } catch (err) {
+          mark(!on)
+          throw err
+        }
+      }),
+    [guarded]
+  )
+
   const removeAll = useCallback(async (projectId: string) => {
     const ids = (listsRef.current[projectId] ?? []).map((c) => c.id)
     await window.api.conversations.removeAll(projectId).catch(() => undefined)
@@ -294,6 +318,7 @@ export function useConversations(): ConversationsState {
     rename,
     remove,
     move,
+    setBypass,
     removeAll,
     chatOf: (conversationId) => chats[conversationId] ?? null,
     loadChat,

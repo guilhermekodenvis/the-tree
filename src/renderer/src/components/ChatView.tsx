@@ -14,6 +14,9 @@ interface Props {
   startError: string | null
   /** Aviso opcional no topo da conversa (ex.: falta a chave do Gemini). */
   banner?: ReactNode
+  /** Bypass ligado: os pedidos de autorização são aprovados sozinhos. */
+  bypass: boolean
+  onBypassChange(on: boolean): void
   onSend(text: string): void
   onRespond(requestId: string, allow: boolean): void
   onInterrupt(): void
@@ -40,8 +43,20 @@ function statusText(chat: Chat, starting: boolean): string {
 }
 
 export function ChatView(props: Props) {
-  const { chat, title, agent, agentName, starting, startError, banner, onSend, onRespond, onInterrupt } =
-    props
+  const {
+    chat,
+    title,
+    agent,
+    agentName,
+    starting,
+    startError,
+    banner,
+    bypass,
+    onBypassChange,
+    onSend,
+    onRespond,
+    onInterrupt
+  } = props
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
@@ -82,6 +97,23 @@ export function ChatView(props: Props) {
             {agentName} · {status}
           </div>
         </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={bypass}
+          className="switch"
+          title={
+            bypass
+              ? `Bypass ligado: o ${agentName} altera arquivos e roda comandos sem perguntar.`
+              : `Ligue para o ${agentName} agir sem pedir autorização a cada passo.`
+          }
+          onClick={() => onBypassChange(!bypass)}
+        >
+          Bypass
+          <span className="switch__track">
+            <span className="switch__thumb" />
+          </span>
+        </button>
       </header>
 
       {banner}
@@ -97,8 +129,9 @@ export function ChatView(props: Props) {
       >
         {chat.items.length === 0 && (
           <p className="text-caption">
-            Peça algo sobre este projeto. O {agentName} lê os arquivos livremente e pede a sua
-            autorização antes de alterar algo ou rodar comandos.
+            {bypass
+              ? `Peça algo sobre este projeto. Com o bypass ligado, o ${agentName} altera arquivos e roda comandos sem perguntar.`
+              : `Peça algo sobre este projeto. O ${agentName} lê os arquivos livremente e pede a sua autorização antes de alterar algo ou rodar comandos.`}
           </p>
         )}
         {chat.items.map((item) => (
@@ -163,6 +196,16 @@ function Item({
         </p>
       )
     case 'permission':
+      if (item.state === 'auto') {
+        return (
+          <div className="tool-line tool-line--auto" title={item.detail}>
+            <span className="tool-line__name">Bypass</span>
+            <span className="truncate">
+              {item.title} · <span className="text-mono">{item.detail.split('\n')[0]}</span>
+            </span>
+          </div>
+        )
+      }
       return (
         <div className="permission">
           <div className="permission__title">{item.title}</div>

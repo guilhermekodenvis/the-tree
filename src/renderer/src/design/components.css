@@ -322,6 +322,65 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Interruptor no estilo do Windows 11 (usado no bypass da conversa). */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.switch:hover {
+  background: var(--color-subtle-hover);
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--color-focus);
+}
+
+.switch__track {
+  position: relative;
+  width: 40px;
+  height: 20px;
+  border: 1px solid var(--color-text-secondary);
+  border-radius: var(--radius-pill);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-text-secondary);
+  transform: translateY(-50%);
+  transition: left var(--motion-normal) var(--motion-ease);
+}
+
+.switch[aria-checked='true'] .switch__track {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+}
+
+.switch[aria-checked='true'] .switch__thumb {
+  left: 22px;
+  background: var(--color-on-accent);
+}
+
+/* Pedido aprovado sozinho pelo bypass: uma linha discreta, sem cartão. */
+.tool-line--auto .tool-line__name {
+  color: var(--color-danger);
+}
+
 .chat__messages {
   display: flex;
   flex-direction: column;

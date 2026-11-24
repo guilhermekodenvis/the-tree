@@ -97,6 +97,8 @@ export function AgentsTab({ project, conversations: state }: Props) {
                 </div>
               ) : undefined
             }
+            bypass={conversation.bypass}
+            onBypassChange={(on) => void state.setBypass(project.id, conversation.id, on)}
             onSend={(text) => void state.send(project.id, conversation.id, text)}
             onRespond={(requestId, allow) => void state.respond(conversation.id, requestId, allow)}
             onInterrupt={() => void state.interrupt(conversation.id)}

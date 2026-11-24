@@ -68,6 +68,9 @@ export function registerIpc(): AgentManager {
   ipcMain.handle('conversations:reorder', (_e, projectId: string, ids: string[]) =>
     agents.reorder(projectId, ids)
   )
+  ipcMain.handle('conversations:setBypass', (_e, projectId: string, id: string, on: boolean) =>
+    agents.setBypass(projectId, id, on === true)
+  )
   ipcMain.handle('conversations:removeAll', (_e, projectId: string) => agents.removeAll(projectId))
 
   ipcMain.handle('agents:start', (_e, projectId: string, conversationId: string) =>

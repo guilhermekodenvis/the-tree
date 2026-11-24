@@ -50,6 +50,8 @@ export function applyEvent(items: ChatItem[], event: AgentEvent): ChatItem[] {
       ]
     case 'permission-cancelled':
       return setPermission(items, event.requestId, 'cancelled')
+    case 'permission-resolved':
+      return setPermission(items, event.requestId, event.state)
     case 'note':
       return [...items, { kind: 'note', id: newId(), text: event.message }]
     case 'error':

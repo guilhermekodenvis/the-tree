@@ -27,6 +27,8 @@ export interface Conversation {
   projectId: string
   agent: AgentId
   name: string
+  /** Bypass: os pedidos de autorização são aprovados sozinhos, sem perguntar. */
+  bypass: boolean
 }
 
 /** O que um agente emite enquanto trabalha. */
@@ -39,6 +41,8 @@ export type AgentEvent =
   | { type: 'permission'; sessionId: string; requestId: string; title: string; detail: string }
   /** Um pedido de autorização deixou de valer sem resposta (ex.: o turno foi cancelado). */
   | { type: 'permission-cancelled'; sessionId: string; requestId: string }
+  /** Um pedido de autorização foi respondido sem você (bypass ligado). */
+  | { type: 'permission-resolved'; sessionId: string; requestId: string; state: PermissionState }
   /** Aviso neutro na conversa (ex.: "Resposta interrompida."). */
   | { type: 'note'; sessionId: string; message: string }
   | { type: 'status'; sessionId: string; status: SessionStatus }
@@ -46,7 +50,8 @@ export type AgentEvent =
   /** Identificador que o agente usa para retomar esta conversa depois. Não aparece na tela. */
   | { type: 'resume-id'; sessionId: string; resumeId: string }
 
-export type PermissionState = 'pending' | 'allowed' | 'denied' | 'cancelled'
+/** 'auto': aprovado sozinho porque o bypass da conversa estava ligado. */
+export type PermissionState = 'pending' | 'allowed' | 'denied' | 'cancelled' | 'auto'
 
 /** Um item da conversa como aparece na tela (e como fica salvo no histórico). */
 export type ChatItem =
@@ -65,6 +70,8 @@ export interface ConversationRecord {
   items: ChatItem[]
   /** Usado para o agente retomar a conversa com a memória do que já foi dito. */
   resumeId?: string
+  /** Bypass ligado (ver Conversation.bypass). Ausente em conversas antigas = desligado. */
+  bypass?: boolean
   createdAt: number
   updatedAt: number
 }
@@ -135,6 +142,11 @@ export interface TreeApi {
     remove(projectId: string, conversationId: string): Promise<void>
     /** Grava a nova ordem; `ids` traz as conversas do projeto na ordem desejada. */
     reorder(projectId: string, ids: string[]): Promise<void>
+    /**
+     * Liga ou desliga o bypass da conversa. Ao ligar, pedidos que já estavam
+     * esperando resposta também são aprovados.
+     */
+    setBypass(projectId: string, conversationId: string, on: boolean): Promise<void>
     /** Encerra e apaga todas as conversas do projeto (usado ao remover o projeto). */
     removeAll(projectId: string): Promise<void>
   }

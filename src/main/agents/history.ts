@@ -163,6 +163,15 @@ export async function renameConversation(
   update(projectId, conversationId, (c) => ({ ...c, name: clean }))
 }
 
+export async function setBypass(
+  projectId: string,
+  conversationId: string,
+  on: boolean
+): Promise<void> {
+  await get(projectId, conversationId)
+  update(projectId, conversationId, (c) => ({ ...c, bypass: on }))
+}
+
 export async function remove(projectId: string, conversationId: string): Promise<void> {
   const { conversations } = await load(projectId)
   setConversations(

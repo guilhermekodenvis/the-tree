@@ -19,7 +19,13 @@ const adapters: Record<AgentId, AgentAdapter> = {
 }
 
 function summary(projectId: string, record: ConversationRecord): Conversation {
-  return { id: record.id, projectId, agent: record.agent, name: record.name }
+  return {
+    id: record.id,
+    projectId,
+    agent: record.agent,
+    name: record.name,
+    bypass: record.bypass === true
+  }
 }
 
 export class AgentManager {
@@ -55,6 +61,18 @@ export class AgentManager {
     return history.reorder(projectId, ids)
   }
 
+  async setBypass(projectId: string, conversationId: string, on: boolean): Promise<void> {
+    await history.setBypass(projectId, conversationId, on)
+    if (!on) return
+    // Pedidos que já estavam na tela esperando você também são aprovados.
+    const session = [...this.sessions.values()].find((s) => s.conversationId === conversationId)
+    const pending = history
+      .cached(projectId, conversationId)
+      ?.items.filter((item) => item.kind === 'permission' && item.state === 'pending')
+    if (!session || !pending) return
+    for (const item of pending) this.autoApprove(session, item.id)
+  }
+
   /** Encerra e apaga todas as conversas do projeto. */
   async removeAll(projectId: string): Promise<void> {
     await this.stopWhere((s) => s.projectId === projectId)
@@ -87,6 +105,11 @@ export class AgentManager {
           : { ...current, items: applyEvent(current.items, event) }
       )
       this.emit(event)
+      // Bypass ligado: aprova na hora. Fica para depois do evento para o adaptador
+      // já ter registrado o pedido e a tela já ter o cartão para marcar.
+      if (event.type === 'permission' && history.cached(projectId, conversationId)?.bypass) {
+        setImmediate(() => this.autoApprove(session, event.requestId))
+      }
     }
 
     try {
@@ -136,6 +159,29 @@ export class AgentManager {
   private async stopWhere(match: (session: AgentSession) => boolean): Promise<void> {
     const ids = [...this.sessions.values()].filter(match).map((s) => s.id)
     await Promise.allSettled(ids.map((id) => this.stop(id)))
+  }
+
+  /** Aprova um pedido sem perguntar e avisa a tela, que mostra o pedido como "aprovado (bypass)". */
+  private autoApprove(session: AgentSession, requestId: string): void {
+    if (!this.sessions.has(session.id)) return
+    adapters[session.agent]
+      .respond(session.id, requestId, true)
+      .then(() => {
+        const resolved: AgentEvent = {
+          type: 'permission-resolved',
+          sessionId: session.id,
+          requestId,
+          state: 'auto'
+        }
+        history.update(session.projectId, session.conversationId, (c) => ({
+          ...c,
+          items: applyEvent(c.items, resolved)
+        }))
+        this.emit(resolved)
+        this.emit({ type: 'status', sessionId: session.id, status: 'running' })
+      })
+      // Pedido que já foi respondido ou cancelado: nada a fazer.
+      .catch(() => undefined)
   }
 
   private sessionOf(sessionId: string): AgentSession {

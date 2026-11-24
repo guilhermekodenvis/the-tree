@@ -40,6 +40,8 @@ const api: TreeApi = {
     rename: (projectId, id, name) => ipcRenderer.invoke('conversations:rename', projectId, id, name),
     remove: (projectId, id) => ipcRenderer.invoke('conversations:remove', projectId, id),
     reorder: (projectId, ids) => ipcRenderer.invoke('conversations:reorder', projectId, ids),
+    setBypass: (projectId, conversationId, on) =>
+      ipcRenderer.invoke('conversations:setBypass', projectId, conversationId, on),
     removeAll: (projectId) => ipcRenderer.invoke('conversations:removeAll', projectId)
   },
   agents: {
