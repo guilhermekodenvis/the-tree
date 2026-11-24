@@ -7,7 +7,7 @@ import { Button } from './ui/Button'
 
 export const AGENTS: { id: AgentId; name: string; tool: string; available: boolean }[] = [
   { id: 'claude', name: 'Claude', tool: 'Claude Code', available: true },
-  { id: 'codex', name: 'ChatGPT', tool: 'Codex CLI', available: false },
+  { id: 'codex', name: 'ChatGPT', tool: 'Codex', available: true },
   { id: 'gemini', name: 'Gemini', tool: 'Gemini CLI', available: false }
 ]
 
