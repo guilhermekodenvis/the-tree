@@ -73,7 +73,21 @@ function createWindow(): BrowserWindow {
   return win
 }
 
-app.whenReady().then(() => {
+// Só uma instância por vez: duas gravariam a lista de projetos, o histórico e as
+// chaves nos mesmos arquivos ao mesmo tempo. Abrir de novo só traz a janela à frente.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  })
+  app.whenReady().then(start)
+}
+
+function start(): void {
   const agents = registerIpc()
   createWindow()
 
@@ -90,7 +104,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
