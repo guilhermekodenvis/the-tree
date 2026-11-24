@@ -31,6 +31,12 @@ type Emit = (event: AgentEvent) => void
 
 const API_KEY_LOGIN = 'gemini-api-key'
 
+/**
+ * Modelo fixo. No modo "auto" o Gemini CLI alterna entre Pro e Flash, mas os
+ * modelos Pro não têm cota no nível gratuito da chave de API (limite 0).
+ */
+const GEMINI_MODEL = 'gemini-3.8-flash'
+
 /** Como o Google responde a uma chave inválida ("API key not valid", motivo API_KEY_INVALID). */
 const BAD_KEY = /API key not valid|API_KEY_INVALID/i
 const BAD_KEY_HELP =
@@ -56,8 +62,20 @@ function innermostMessage(text: string): string {
   return message.trim()
 }
 
+/** Como o Google responde quando a cota acaba (RESOURCE_EXHAUSTED, erro 429). */
+const QUOTA = /RESOURCE_EXHAUSTED|exceeded your current quota/i
+
+function quotaHelp(message: string): string {
+  // "Please retry in 19h39m35.78s" vira "19h39m".
+  const wait = message.match(/retry in ((?:\d+h)?(?:\d+m)?)/i)?.[1]
+  const when = wait ? ` Tente de novo em cerca de ${wait}.` : ' Tente de novo mais tarde.'
+  return `Você atingiu o limite de uso gratuito do Gemini (${GEMINI_MODEL}).${when} Para usar mais, ative o faturamento no Google AI Studio.`
+}
+
 function friendly(message: string): string {
-  return BAD_KEY.test(message) ? BAD_KEY_HELP : innermostMessage(message)
+  if (BAD_KEY.test(message)) return BAD_KEY_HELP
+  const inner = innermostMessage(message)
+  return QUOTA.test(message) ? quotaHelp(inner) : inner
 }
 
 interface Live {
@@ -110,7 +128,7 @@ function spawnGemini(cwd: string, handlers: ConstructorParameters<typeof JsonRpc
     {
       name: 'Gemini',
       command: process.execPath,
-      args: [locateGemini(), '--acp'],
+      args: [locateGemini(), '--acp', '--model', GEMINI_MODEL],
       cwd,
       // Faz o executável do Electron se comportar como Node puro.
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
