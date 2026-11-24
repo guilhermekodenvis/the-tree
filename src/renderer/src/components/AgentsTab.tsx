@@ -12,9 +12,11 @@ import { Icon } from './ui/Icon'
 interface Props {
   project: Project
   conversations: ConversationsState
+  /** A aba do projeto está na frente (ver ChatView.visible). */
+  visible: boolean
 }
 
-export function AgentsTab({ project, conversations: state }: Props) {
+export function AgentsTab({ project, conversations: state, visible }: Props) {
   const geminiKey = useGeminiKey()
   const [editingKey, setEditingKey] = useState(false)
 
@@ -83,6 +85,7 @@ export function AgentsTab({ project, conversations: state }: Props) {
             key={conversation.id}
             chat={state.chatOf(conversation.id) ?? { sessionId: null, status: 'idle', items: [], loaded: false }}
             title={conversation.name}
+            visible={visible}
             agent={conversation.agent}
             agentName={agentName(conversation.agent)}
             starting={state.isStarting(conversation.id)}

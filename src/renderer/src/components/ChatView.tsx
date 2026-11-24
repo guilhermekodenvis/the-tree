@@ -11,6 +11,11 @@ import { Icon } from './ui/Icon'
 interface Props {
   chat: Chat
   title: string
+  /**
+   * A conversa está na frente. Escondida (aba de outro projeto), a lista não
+   * tem altura e não dá para rolar; ao voltar, ela vai para o fim.
+   */
+  visible: boolean
   agent: AgentId
   agentName: string
   starting: boolean
@@ -54,6 +59,7 @@ export function ChatView(props: Props) {
   const {
     chat,
     title,
+    visible,
     agent,
     agentName,
     starting,
@@ -72,11 +78,23 @@ export function ChatView(props: Props) {
   const stickToBottom = useRef(true)
 
   // Segue o fim da conversa conforme chegam mensagens, a não ser que você
-  // tenha rolado para cima para reler algo.
+  // tenha rolado para cima para reler algo. Também ao voltar para a aba do projeto.
   useEffect(() => {
     const list = listRef.current
     if (list && stickToBottom.current) list.scrollTop = list.scrollHeight
-  }, [chat.items])
+  }, [chat.items, visible])
+
+  // A conversa pode carregar numa aba de projeto escondida (sem altura) ou a
+  // janela pode mudar de tamanho: quando a lista ganha tamanho, volta para o fim.
+  useEffect(() => {
+    const list = listRef.current
+    if (!list) return
+    const observer = new ResizeObserver(() => {
+      if (stickToBottom.current) list.scrollTop = list.scrollHeight
+    })
+    observer.observe(list)
+    return () => observer.disconnect()
+  }, [])
 
   const info = agentInfo(agent)
   const busy = starting || chat.status === 'running' || chat.status === 'waiting'

@@ -5,7 +5,6 @@ import { AgentsTab } from './AgentsTab'
 import { FilesTab } from './FilesTab'
 import { SkillsTab } from './SkillsTab'
 import { Tabs } from './ui/Tabs'
-import { Icon } from './ui/Icon'
 
 export type ProjectTab = 'files' | 'agents' | 'skills'
 
@@ -13,18 +12,15 @@ interface Props {
   project: Project
   tab: ProjectTab
   conversations: ConversationsState
+  /** Aba de projeto que não está na frente: fica montada, só escondida. */
+  hidden: boolean
   onTabChange(tab: ProjectTab): void
-  onBack(): void
 }
 
-export function ProjectScreen({ project, tab, conversations, onTabChange, onBack }: Props) {
+export function ProjectScreen({ project, hidden, tab, conversations, onTabChange }: Props) {
   return (
-    <main className="screen screen--flush">
+    <main className="screen screen--flush" hidden={hidden}>
       <header className="project-header">
-        <button type="button" className="link breadcrumb" onClick={onBack}>
-          <Icon name="back" />
-          Projetos
-        </button>
         <h1 className="text-subtitle truncate">{project.name}</h1>
         <p className="text-caption text-mono truncate" title={project.path}>
           {project.path}
@@ -42,7 +38,7 @@ export function ProjectScreen({ project, tab, conversations, onTabChange, onBack
       </header>
       <div className="project-body" role="tabpanel">
         {tab === 'files' && <FilesTab project={project} />}
-        {tab === 'agents' && <AgentsTab project={project} conversations={conversations} />}
+        {tab === 'agents' && <AgentsTab project={project} conversations={conversations} visible={!hidden} />}
         {tab === 'skills' && <SkillsTab project={project} />}
       </div>
     </main>

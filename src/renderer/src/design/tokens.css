@@ -112,6 +112,8 @@
   --size-tree-item: 28px;
   --size-project-card: 280px; /* largura mínima de um card na tela de projetos */
   --size-popover: 260px;
+  --size-project-tab: 220px; /* largura de uma aba de projeto aberto */
+  --size-project-tab-min: 96px; /* menor largura antes de a aba deixar de encolher */
   --size-popover-wide: 360px; /* menus com nome e descrição (skills) */
   --size-skill-menu-height: 280px; /* altura máxima do menu "/" da conversa */
 }

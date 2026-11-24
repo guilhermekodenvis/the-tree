@@ -66,3 +66,8 @@ button {
     transition-duration: 0ms !important;
   }
 }
+
+/* "hidden" vence o display das classes (ex.: abas de projeto escondidas). */
+[hidden] {
+  display: none !important;
+}
