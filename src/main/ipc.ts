@@ -28,9 +28,13 @@ export function registerIpc(): void {
     return projects.add(result.filePaths[0])
   })
 
-  ipcMain.handle('files:list', (_e, dir: string) => files.list(dir))
-  ipcMain.handle('files:read', (_e, path: string) => files.read(path))
-  ipcMain.handle('files:write', (_e, path: string, content: string) => files.write(path, content))
+  ipcMain.handle('files:list', (_e, projectId: string, dir: string) => files.list(projectId, dir))
+  ipcMain.handle('files:read', (_e, projectId: string, path: string) =>
+    files.read(projectId, path)
+  )
+  ipcMain.handle('files:write', (_e, projectId: string, path: string, content: string) =>
+    files.write(projectId, path, content)
+  )
 
   ipcMain.handle('agents:start', (_e, projectId: string, agent: AgentId) =>
     agents.start(projectId, agent)

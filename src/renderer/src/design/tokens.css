@@ -61,11 +61,13 @@
 
   --text-caption: 12px;
   --text-body: 14px;
+  --text-code: 13px;
   --text-subtitle: 20px;
   --text-title: 28px;
 
   --leading-caption: 16px;
   --leading-body: 20px;
+  --leading-code: 20px;
   --leading-subtitle: 28px;
   --leading-title: 36px;
 
@@ -101,4 +103,6 @@
   --size-control: 32px;
   --size-nav-item: 52px;
   --size-icon: 16px;
+  --size-file-tree: 260px;
+  --size-tree-item: 28px;
 }

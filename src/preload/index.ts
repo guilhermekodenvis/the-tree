@@ -11,9 +11,10 @@ const api: TreeApi = {
     remove: (id) => ipcRenderer.invoke('projects:remove', id)
   },
   files: {
-    list: (dir) => ipcRenderer.invoke('files:list', dir),
-    read: (path) => ipcRenderer.invoke('files:read', path),
-    write: (path, content) => ipcRenderer.invoke('files:write', path, content)
+    list: (projectId, dir) => ipcRenderer.invoke('files:list', projectId, dir),
+    read: (projectId, path) => ipcRenderer.invoke('files:read', projectId, path),
+    write: (projectId, path, content) =>
+      ipcRenderer.invoke('files:write', projectId, path, content)
   },
   agents: {
     start: (projectId, agent) => ipcRenderer.invoke('agents:start', projectId, agent),

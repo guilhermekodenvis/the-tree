@@ -236,3 +236,75 @@
   font-size: var(--text-caption);
   line-height: var(--leading-caption);
 }
+
+/* ---- Árvore de arquivos ---------------------------------------------------- */
+.tree-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  height: var(--size-tree-item);
+  /* --depth é o nível da pasta, definido pelo componente. */
+  padding: 0 var(--space-2) 0 calc(var(--space-1) + var(--depth, 0) * var(--space-4));
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.tree-item:hover {
+  background: var(--color-subtle-hover);
+}
+
+.tree-item:active {
+  background: var(--color-subtle-pressed);
+}
+
+.tree-item--selected {
+  background: var(--color-subtle-hover);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.tree-item .icon {
+  color: var(--color-text-secondary);
+}
+
+.tree-item__chevron {
+  width: var(--size-icon);
+  flex-shrink: 0;
+  transition: transform var(--motion-fast) var(--motion-ease);
+}
+
+.tree-item__chevron--open {
+  transform: rotate(90deg);
+}
+
+.tree-note {
+  padding: var(--space-1) var(--space-2) var(--space-1)
+    calc(var(--space-6) + var(--depth, 0) * var(--space-4));
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.tree-note--danger {
+  color: var(--color-danger);
+}
+
+/* ---- Visualizador de código ------------------------------------------------ */
+.code-view {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  overflow: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-code);
+  line-height: var(--leading-code);
+  white-space: pre;
+  tab-size: 2;
+  user-select: text;
+  cursor: text;
+}

@@ -2,12 +2,24 @@
 // Para trocar um ícone, mude o desenho aqui; o tamanho e a cor vêm do design system.
 import type { ReactNode } from 'react'
 
-export type IconName = 'folder' | 'add' | 'dismiss' | 'tree'
+export type IconName =
+  | 'folder'
+  | 'document'
+  | 'chevron'
+  | 'refresh'
+  | 'add'
+  | 'dismiss'
+  | 'tree'
 
 const paths: Record<IconName, ReactNode> = {
   folder: (
     <path d="M1.75 4.25c0-.83.67-1.5 1.5-1.5h2.9c.4 0 .78.16 1.06.44l.85.85c.1.1.22.15.36.15h4.33c.83 0 1.5.67 1.5 1.5v6.06c0 .83-.67 1.5-1.5 1.5h-9.5c-.83 0-1.5-.67-1.5-1.5v-7.5Z" />
   ),
+  document: (
+    <path d="M9.25 1.75h-4.5c-.83 0-1.5.67-1.5 1.5v9.5c0 .83.67 1.5 1.5 1.5h6.5c.83 0 1.5-.67 1.5-1.5v-7.5l-3.5-3.5Zm0 0v2.5c0 .55.45 1 1 1h2.5" />
+  ),
+  chevron: <path d="m6 3.75 4.25 4.25L6 12.25" />,
+  refresh: <path d="M13.25 8a5.25 5.25 0 1 1-1.54-3.71M13.25 2.5v2.75H10.5" />,
   add: <path d="M8 2.75v10.5M2.75 8h10.5" />,
   dismiss: <path d="m3.5 3.5 9 9m0-9-9 9" />,
   tree: (

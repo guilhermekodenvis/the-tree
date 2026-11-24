@@ -28,9 +28,16 @@ export type AgentEvent =
 
 export interface FileEntry {
   name: string
+  /** Caminho relativo à pasta do projeto, com "/" como separador. */
   path: string
   isDirectory: boolean
 }
+
+/** Resultado de abrir um arquivo: só texto de tamanho razoável é carregado. */
+export type FileContent =
+  | { kind: 'text'; content: string }
+  | { kind: 'binary'; size: number }
+  | { kind: 'too-large'; size: number }
 
 /** API que a interface enxerga em `window.api` (implementada no preload). */
 export interface TreeApi {
@@ -42,9 +49,10 @@ export interface TreeApi {
     remove(id: string): Promise<void>
   }
   files: {
-    list(dir: string): Promise<FileEntry[]>
-    read(path: string): Promise<string>
-    write(path: string, content: string): Promise<void>
+    // Os caminhos são sempre relativos à pasta do projeto ('' é a raiz).
+    list(projectId: string, dir: string): Promise<FileEntry[]>
+    read(projectId: string, path: string): Promise<FileContent>
+    write(projectId: string, path: string, content: string): Promise<void>
   }
   agents: {
     start(projectId: string, agent: AgentId): Promise<AgentSession>

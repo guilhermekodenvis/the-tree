@@ -12,7 +12,7 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 960,
+    minWidth: 1120,
     minHeight: 600,
     title: 'The Tree',
     backgroundColor: chrome().background,

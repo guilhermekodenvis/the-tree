@@ -1,6 +1,7 @@
 // Estado dos projetos na interface: lista, projeto ativo e as ações de adicionar/remover.
 import { useCallback, useEffect, useState } from 'react'
 import type { Project } from '../../../shared/types'
+import { messageOf } from '../lib/errors'
 
 export interface ProjectsState {
   projects: Project[]
@@ -10,12 +11,6 @@ export interface ProjectsState {
   /** Abre o seletor de pastas do Windows e cadastra a pasta escolhida. */
   add(): Promise<void>
   remove(project: Project): Promise<void>
-}
-
-function messageOf(err: unknown): string {
-  const text = err instanceof Error ? err.message : String(err)
-  // O Electron prefixa erros vindos do processo principal; mostramos só a parte útil.
-  return text.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 }
 
 export function useProjects(): ProjectsState {
