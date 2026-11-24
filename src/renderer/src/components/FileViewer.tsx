@@ -1,8 +1,9 @@
 // Mostra o conteúdo de um arquivo, somente leitura.
 // TODO: trocar por um editor (Monaco) com realce de sintaxe e gravação.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FileContent } from '../../../shared/types'
 import { messageOf } from '../lib/errors'
+import { useFileChanges } from '../lib/fileEvents'
 import { Icon } from './ui/Icon'
 
 interface Props {
@@ -24,11 +25,22 @@ function formatSize(bytes: number): string {
 
 export function FileViewer({ projectId, path }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [version, setVersion] = useState(0)
+  const shownPath = useRef<string | null>(null)
+
+  // Se o arquivo aberto muda no disco (ex.: um agente o editou), mostra a versão nova.
+  useFileChanges(
+    projectId,
+    (change) => path !== null && change.paths.includes(path),
+    () => setVersion((v) => v + 1)
+  )
 
   useEffect(() => {
     if (path === null) return
     let stale = false
-    setState({ status: 'loading' })
+    // Só mostra "Carregando…" ao trocar de arquivo; ao recarregar o mesmo, troca direto.
+    if (shownPath.current !== path) setState({ status: 'loading' })
+    shownPath.current = path
     window.api.files
       .read(projectId, path)
       .then((file) => !stale && setState({ status: 'ready', file }))
@@ -36,7 +48,7 @@ export function FileViewer({ projectId, path }: Props) {
     return () => {
       stale = true
     }
-  }, [projectId, path])
+  }, [projectId, path, version])
 
   if (path === null) {
     return (

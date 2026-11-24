@@ -5,6 +5,7 @@ import { Button, IconButton } from './ui/Button'
 import { Icon } from './ui/Icon'
 import { FileTree } from './FileTree'
 import { FileViewer } from './FileViewer'
+import { useWatchProject } from '../lib/fileEvents'
 
 interface Props {
   project: Project | null
@@ -43,6 +44,7 @@ export function EditorPane({ project, hasProjects, onAdd }: Props) {
 function Explorer({ project }: { project: Project }) {
   const [openFile, setOpenFile] = useState<string | null>(null)
   const [treeVersion, setTreeVersion] = useState(0)
+  useWatchProject(project.id)
 
   return (
     <main className="pane pane--flush">

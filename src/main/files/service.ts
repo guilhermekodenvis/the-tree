@@ -61,7 +61,10 @@ export async function list(projectId: string, dir: string): Promise<FileEntry[]>
 }
 
 export async function read(projectId: string, path: string): Promise<FileContent> {
-  const { target } = await locate(projectId, path)
+  const { target } = await locate(projectId, path).catch((err) => {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') throw new Error('Este arquivo não existe mais.')
+    throw err
+  })
   const info = await stat(target)
   if (!info.isFile()) throw new Error('Não é um arquivo')
   if (info.size > MAX_TEXT_BYTES) return { kind: 'too-large', size: info.size }

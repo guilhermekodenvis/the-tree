@@ -5,10 +5,10 @@
 // Cada sessão é um processo de vida longa: as mensagens do usuário entram por uma
 // fila e as respostas saem como um fluxo de eventos, traduzidos para AgentEvent.
 import { randomUUID } from 'node:crypto'
-import { isAbsolute, relative } from 'node:path'
 import type { CanUseTool, Query, SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk'
 import type { AgentEvent } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
+import { clip, shortPath } from './describe'
 
 type Emit = (event: AgentEvent) => void
 
@@ -53,6 +53,11 @@ interface Live {
   cwd: string
   /** Pedidos de autorização aguardando resposta do usuário. */
   pending: Map<string, (allow: boolean) => void>
+  /** Id da última mensagem do Claude, para agrupar os pedaços de texto. */
+  messageId: string
+  resumeId: string | null
+  /** O usuário pediu para parar: o fim do turno não deve aparecer como erro. */
+  interrupted: boolean
   stopped: boolean
 }
 
@@ -61,24 +66,13 @@ const live = new Map<string, Live>()
 /** Erros que o Claude Code reporta e o que o usuário pode fazer a respeito. */
 const ERROR_HELP: Record<string, string> = {
   authentication_failed:
-    'O Claude Code não está autenticado nesta máquina. Rode "claude auth login" num terminal, encerre esta conversa e inicie outra.',
+    'O Claude Code não está autenticado nesta máquina. Rode "claude auth login" num terminal e envie a mensagem de novo.',
   billing_error: 'O Claude Code reportou um problema de cobrança na sua conta.',
   rate_limit: 'Você atingiu o limite de uso do Claude no momento. Tente de novo mais tarde.',
   overloaded: 'O serviço do Claude está sobrecarregado. Tente de novo em instantes.'
 }
 
 const PATH_FIELDS = new Set(['file_path', 'path', 'notebook_path'])
-
-/** Caminho relativo ao projeto quando o arquivo está dentro dele; senão, o caminho inteiro. */
-function shortPath(path: string, cwd: string): string {
-  const rel = relative(cwd, path)
-  return rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : path
-}
-
-function clip(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}
-… (cortado: ${text.length} caracteres no total)` : text
-}
 
 /** Resumo de uma linha do que a ferramenta vai fazer, para mostrar na conversa. */
 function describe(input: Record<string, unknown>, cwd: string): string {
@@ -112,31 +106,26 @@ function describeRequest(toolName: string, input: Record<string, unknown>, cwd: 
   const path = text('file_path')
 
   if (toolName === 'Write' && path !== null) {
-    return clip(`${shortPath(path, cwd)}
-
-${text('content') ?? ''}`, 4000)
+    return clip(`${shortPath(path, cwd)}\n\n${text('content') ?? ''}`, 4000)
   }
   if (toolName === 'Edit' && path !== null) {
     const before = text('old_string') ?? ''
     const after = text('new_string') ?? ''
-    return clip(`${shortPath(path, cwd)}
-
-Trocar:
-${before}
-
-Por:
-${after}`, 4000)
+    return clip(`${shortPath(path, cwd)}\n\nTrocar:\n${before}\n\nPor:\n${after}`, 4000)
   }
   return clip(describe(input, cwd), 4000)
 }
 
 /** Traduz uma mensagem do SDK em eventos da interface. */
-function translate(
-  sessionId: string,
-  state: { messageId: string; cwd: string },
-  message: SDKMessage,
-  emit: Emit
-): void {
+function translate(sessionId: string, session: Live, message: SDKMessage): void {
+  const { emit } = session
+
+  // Guarda o id da conversa do Claude Code, para retomá-la depois de fechar o app.
+  if ('session_id' in message && message.session_id && message.session_id !== session.resumeId) {
+    session.resumeId = message.session_id
+    emit({ type: 'resume-id', sessionId, resumeId: message.session_id })
+  }
+
   // Mensagens de subagentes ficam de fora: a conversa mostra só o agente principal.
   if ('parent_tool_use_id' in message && message.parent_tool_use_id) return
 
@@ -144,12 +133,12 @@ function translate(
     case 'stream_event': {
       // O texto chega em pedaços; a chave junta os pedaços de um mesmo bloco.
       const event = message.event
-      if (event.type === 'message_start') state.messageId = event.message.id
+      if (event.type === 'message_start') session.messageId = event.message.id
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
         emit({
           type: 'text',
           sessionId,
-          key: `${state.messageId}:${event.index}`,
+          key: `${session.messageId}:${event.index}`,
           text: event.delta.text
         })
       }
@@ -164,11 +153,11 @@ function translate(
             sessionId,
             id: block.id,
             name: block.name,
-            detail: describe(block.input as Record<string, unknown>, state.cwd)
+            detail: describe(block.input as Record<string, unknown>, session.cwd)
           })
         }
       }
-      if (message.error) {
+      if (message.error && !session.interrupted) {
         emit({
           type: 'error',
           sessionId,
@@ -178,10 +167,13 @@ function translate(
       break
     }
     case 'result': {
-      if (message.subtype !== 'success') {
+      if (session.interrupted) {
+        emit({ type: 'note', sessionId, message: 'Resposta interrompida.' })
+      } else if (message.subtype !== 'success') {
         const reason = message.errors.join('; ') || message.subtype
         emit({ type: 'error', sessionId, message: `O turno terminou com erro: ${reason}` })
       }
+      session.interrupted = false
       emit({ type: 'status', sessionId, status: 'idle' })
       break
     }
@@ -189,11 +181,8 @@ function translate(
 }
 
 async function consume(sessionId: string, session: Live): Promise<void> {
-  const state = { messageId: '', cwd: session.cwd }
   try {
-    for await (const message of session.query) {
-      translate(sessionId, state, message, session.emit)
-    }
+    for await (const message of session.query) translate(sessionId, session, message)
     // O processo terminou sem ninguém pedir: avisa, senão a conversa fica muda.
     if (!session.stopped) {
       session.emit({ type: 'error', sessionId, message: 'O Claude Code encerrou a sessão.' })
@@ -218,7 +207,7 @@ function sessionOf(sessionId: string): Live {
 export const claudeAdapter: AgentAdapter = {
   id: 'claude',
 
-  async start(sessionId, cwd, emit) {
+  async start(sessionId, cwd, emit, resumeId) {
     // O SDK é um módulo ESM; o import dinâmico funciona a partir do processo principal.
     const { query } = await import('@anthropic-ai/claude-agent-sdk')
 
@@ -266,12 +255,17 @@ export const claudeAdapter: AgentAdapter = {
       pending,
       emit,
       cwd,
+      messageId: '',
+      resumeId: resumeId ?? null,
+      interrupted: false,
       stopped: false,
       query: query({
         prompt: queue,
         options: {
           cwd,
           canUseTool,
+          // Retoma a conversa anterior (o Claude Code guarda o histórico em ~/.claude).
+          resume: resumeId,
           // 'default' mantém as aprovações manuais: nada que altere o projeto roda
           // sem passar por canUseTool (salvo regras que você já liberou no Claude Code).
           permissionMode: 'default',
@@ -298,6 +292,12 @@ export const claudeAdapter: AgentAdapter = {
     const resolve = sessionOf(sessionId).pending.get(requestId)
     if (!resolve) throw new Error('Este pedido de autorização não está mais pendente.')
     resolve(allow)
+  },
+
+  async interrupt(sessionId) {
+    const session = sessionOf(sessionId)
+    session.interrupted = true
+    await session.query.interrupt()
   },
 
   async stop(sessionId) {

@@ -1,8 +1,9 @@
 // Árvore de arquivos do projeto. Cada pasta só carrega o conteúdo quando é aberta;
-// fechar e abrir de novo recarrega, o que serve de atualização manual.
+// cada pasta aberta se recarrega sozinha quando o conteúdo dela muda no disco.
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { FileEntry } from '../../../shared/types'
 import { messageOf } from '../lib/errors'
+import { useFileChanges } from '../lib/fileEvents'
 import { Icon } from './ui/Icon'
 
 interface TreeProps {
@@ -30,17 +31,29 @@ const indent = (depth: number): CSSProperties => ({ '--depth': depth }) as CSSPr
 function Directory({ projectId, path, depth, selected, onOpen }: DirectoryProps) {
   const [entries, setEntries] = useState<FileEntry[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [version, setVersion] = useState(0)
+
+  // Recarrega esta pasta quando algo dentro dela muda no disco.
+  useFileChanges(
+    projectId,
+    (change) => change.dirs.includes(path),
+    () => setVersion((v) => v + 1)
+  )
 
   useEffect(() => {
     let stale = false
     window.api.files
       .list(projectId, path)
-      .then((result) => !stale && setEntries(result))
+      .then((result) => {
+        if (stale) return
+        setEntries(result)
+        setError(null)
+      })
       .catch((err) => !stale && setError(messageOf(err)))
     return () => {
       stale = true
     }
-  }, [projectId, path])
+  }, [projectId, path, version])
 
   if (error) return <Note depth={depth} text={error} danger />
   if (!entries) return <Note depth={depth} text="Carregando…" />

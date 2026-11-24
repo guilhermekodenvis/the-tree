@@ -15,7 +15,7 @@ export function App() {
   const state = {
     ...projects,
     remove: async (project: Parameters<typeof projects.remove>[0]) => {
-      await agents.close(project.id)
+      await agents.forget(project.id)
       await projects.remove(project)
     }
   }
