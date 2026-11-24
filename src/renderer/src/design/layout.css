@@ -1,10 +1,15 @@
-/* DESIGN SYSTEM — LAYOUT: estrutura da janela. Só usa tokens. */
+/* DESIGN SYSTEM — LAYOUT: estrutura da janela e das telas. Só usa tokens. */
 
 .app {
   display: grid;
-  grid-template-columns: var(--size-sidebar) 1fr;
+  grid-template-columns: var(--size-nav) 1fr;
   grid-template-rows: var(--size-titlebar) 1fr;
   height: 100%;
+  transition: grid-template-columns var(--motion-normal) var(--motion-ease);
+}
+
+.app--nav-collapsed {
+  grid-template-columns: var(--size-nav-collapsed) 1fr;
 }
 
 /* Barra de título própria: arrastável; os botões de janela são do Windows. */
@@ -23,35 +28,30 @@
   color: var(--color-accent);
 }
 
-.sidebar {
+/* ---- Menu lateral ------------------------------------------------------------ */
+.nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  min-height: 0;
-  padding: var(--space-2);
+  gap: var(--space-1);
+  min-width: 0;
+  padding: 0 var(--space-1) var(--space-2);
+  overflow: hidden;
 }
 
-.sidebar__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-1) 0 var(--space-3);
-  font-weight: var(--weight-semibold);
+.nav__toggle {
+  margin-left: var(--space-1);
 }
 
-.sidebar__list {
+.nav__list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 /* Área de trabalho: a "camada" clara por cima do fundo, com canto arredondado. */
 .workspace {
-  display: grid;
-  grid-template-columns: 1fr var(--size-agents);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   border-top: 1px solid var(--color-stroke);
@@ -61,61 +61,70 @@
   overflow: hidden;
 }
 
-.pane {
+/* ---- Telas ------------------------------------------------------------------- */
+.screen {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
+  gap: var(--space-6);
+  flex: 1;
   min-height: 0;
-  padding: var(--space-6);
+  padding: var(--space-8);
   overflow-y: auto;
 }
 
-.pane + .pane {
-  border-left: 1px solid var(--color-stroke);
-}
-
-.pane__header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-/* Painel sem margem interna: o conteúdo encosta nas bordas e cuida do próprio espaço. */
-.pane--flush {
+.screen--flush {
   gap: 0;
   padding: 0;
   overflow: hidden;
 }
 
-.pane__header--bar {
-  padding: var(--space-4) var(--space-6);
+.screen__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.project-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  min-width: 0;
+  padding: var(--space-4) var(--space-6) 0;
   border-bottom: 1px solid var(--color-stroke);
 }
 
-/* Explorador: árvore de arquivos à esquerda, visualizador à direita. */
-.explorer {
-  display: grid;
-  grid-template-columns: var(--size-file-tree) 1fr;
+.project-header .tabs {
+  margin-top: var(--space-2);
+}
+
+.project-body {
+  display: flex;
   flex: 1;
   min-height: 0;
 }
 
-.explorer__tree {
+/* ---- Divisão lista lateral + conteúdo (abas Arquivos e Agentes) -------------- */
+.split {
+  display: grid;
+  grid-template-columns: var(--size-side-list) 1fr;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.split__side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   min-height: 0;
   padding: var(--space-2);
   overflow-y: auto;
   border-right: 1px solid var(--color-stroke);
 }
 
-.explorer__tree-header {
+.split__side-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -123,15 +132,29 @@
   font-weight: var(--weight-semibold);
 }
 
-.explorer__viewer {
+.split__main {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
 }
 
+.split__center {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-8);
+  overflow-y: auto;
+}
+
 .viewer__bar {
   flex-shrink: 0;
   padding: var(--space-2) var(--space-6);
   border-bottom: 1px solid var(--color-stroke);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }

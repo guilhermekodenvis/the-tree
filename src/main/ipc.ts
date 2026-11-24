@@ -52,9 +52,26 @@ export function registerIpc(): AgentManager {
   })
   ipcMain.handle('settings:geminiKey:remove', () => removeSecret('gemini-api-key'))
 
-  ipcMain.handle('agents:history', (_e, projectId: string) => agents.history(projectId))
-  ipcMain.handle('agents:start', (_e, projectId: string, agent: AgentId, resume: boolean) =>
-    agents.start(projectId, agent, resume)
+  ipcMain.handle('conversations:list', (_e, projectId: string) => agents.list(projectId))
+  ipcMain.handle('conversations:items', (_e, projectId: string, id: string) =>
+    agents.items(projectId, id)
+  )
+  ipcMain.handle('conversations:create', (_e, projectId: string, agent: AgentId) =>
+    agents.create(projectId, agent)
+  )
+  ipcMain.handle('conversations:rename', (_e, projectId: string, id: string, name: string) =>
+    agents.rename(projectId, id, name)
+  )
+  ipcMain.handle('conversations:remove', (_e, projectId: string, id: string) =>
+    agents.remove(projectId, id)
+  )
+  ipcMain.handle('conversations:reorder', (_e, projectId: string, ids: string[]) =>
+    agents.reorder(projectId, ids)
+  )
+  ipcMain.handle('conversations:removeAll', (_e, projectId: string) => agents.removeAll(projectId))
+
+  ipcMain.handle('agents:start', (_e, projectId: string, conversationId: string) =>
+    agents.start(projectId, conversationId)
   )
   ipcMain.handle('agents:send', (_e, sessionId: string, message: string) =>
     agents.send(sessionId, message)
@@ -64,7 +81,6 @@ export function registerIpc(): AgentManager {
   )
   ipcMain.handle('agents:interrupt', (_e, sessionId: string) => agents.interrupt(sessionId))
   ipcMain.handle('agents:stop', (_e, sessionId: string) => agents.stop(sessionId))
-  ipcMain.handle('agents:forget', (_e, projectId: string) => agents.forget(projectId))
 
   return agents
 }

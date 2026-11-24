@@ -1,9 +1,10 @@
 // Guarda as sessões abertas, encaminha cada chamada ao adaptador certo e mantém
-// o histórico salvo de cada conversa. Várias sessões podem rodar em paralelo
-// (uma por projeto): é assim que dá para usar Claude e ChatGPT ao mesmo tempo.
+// o histórico de cada conversa. Um projeto pode ter várias conversas, e cada uma
+// pode ter um agente rodando ao mesmo tempo: é assim que dá para usar Claude e
+// ChatGPT em paralelo.
 import { randomUUID } from 'node:crypto'
 import { addUserMessage, applyEvent, setPermission } from '../../shared/chat'
-import type { AgentEvent, AgentId, AgentSession, ChatRecord } from '../../shared/types'
+import type { AgentEvent, AgentId, AgentSession, ChatItem, Conversation, ConversationRecord } from '../../shared/types'
 import type { AgentAdapter } from './adapter'
 import { claudeAdapter } from './claude'
 import { codexAdapter } from './codex'
@@ -17,38 +18,79 @@ const adapters: Record<AgentId, AgentAdapter> = {
   gemini: geminiAdapter
 }
 
+function summary(projectId: string, record: ConversationRecord): Conversation {
+  return { id: record.id, projectId, agent: record.agent, name: record.name }
+}
+
 export class AgentManager {
   private sessions = new Map<string, AgentSession>()
 
   constructor(private emit: (event: AgentEvent) => void) {}
 
-  history(projectId: string): Promise<ChatRecord | null> {
-    return history.load(projectId)
+  // ---- Conversas ------------------------------------------------------------
+
+  async list(projectId: string): Promise<Conversation[]> {
+    return (await history.load(projectId)).conversations.map((c) => summary(projectId, c))
   }
 
-  async start(projectId: string, agent: AgentId, resume: boolean): Promise<AgentSession> {
+  items(projectId: string, conversationId: string): Promise<ChatItem[]> {
+    return history.items(projectId, conversationId)
+  }
+
+  async create(projectId: string, agent: AgentId): Promise<Conversation> {
+    if (!adapters[agent]) throw new Error(`Agente desconhecido: ${agent}`)
+    return summary(projectId, await history.create(projectId, agent))
+  }
+
+  rename(projectId: string, conversationId: string, name: string): Promise<void> {
+    return history.renameConversation(projectId, conversationId, name)
+  }
+
+  async remove(projectId: string, conversationId: string): Promise<void> {
+    await this.stopWhere((s) => s.conversationId === conversationId)
+    await history.remove(projectId, conversationId)
+  }
+
+  reorder(projectId: string, ids: string[]): Promise<void> {
+    return history.reorder(projectId, ids)
+  }
+
+  /** Encerra e apaga todas as conversas do projeto. */
+  async removeAll(projectId: string): Promise<void> {
+    await this.stopWhere((s) => s.projectId === projectId)
+    await history.removeProject(projectId)
+  }
+
+  // ---- Sessões --------------------------------------------------------------
+
+  async start(projectId: string, conversationId: string): Promise<AgentSession> {
     const project = await projects.get(projectId)
     if (!project) throw new Error(`Projeto não encontrado: ${projectId}`)
+    const record = await history.get(projectId, conversationId)
 
-    // Uma conversa por projeto: iniciar de novo substitui a anterior.
-    await this.stopProject(projectId)
+    // Um agente por conversa: iniciar de novo substitui o anterior.
+    await this.stopWhere((s) => s.conversationId === conversationId)
 
-    const saved = resume ? await history.load(projectId) : null
-    const record: ChatRecord =
-      saved && saved.agent === agent ? saved : { agent, items: [], updatedAt: Date.now() }
-
-    const session: AgentSession = { id: randomUUID(), projectId, agent, status: 'idle' }
+    const session: AgentSession = {
+      id: randomUUID(),
+      projectId,
+      conversationId,
+      agent: record.agent,
+      status: 'idle'
+    }
     this.sessions.set(session.id, session)
 
     const emit = (event: AgentEvent): void => {
-      this.record(projectId, event)
+      history.update(projectId, conversationId, (current) =>
+        event.type === 'resume-id'
+          ? { ...current, resumeId: event.resumeId }
+          : { ...current, items: applyEvent(current.items, event) }
+      )
       this.emit(event)
     }
 
-    // Grava antes de iniciar: os primeiros eventos do agente já atualizam este registro.
-    history.save(projectId, record)
     try {
-      await adapters[agent].start(session.id, project.path, emit, record.resumeId)
+      await adapters[record.agent].start(session.id, project.path, emit, record.resumeId)
     } catch (err) {
       this.sessions.delete(session.id)
       throw err
@@ -58,9 +100,9 @@ export class AgentManager {
 
   async send(sessionId: string, message: string): Promise<void> {
     const session = this.sessionOf(sessionId)
-    this.update(session.projectId, (record) => ({
-      ...record,
-      items: addUserMessage(record.items, message)
+    history.update(session.projectId, session.conversationId, (c) => ({
+      ...c,
+      items: addUserMessage(c.items, message)
     }))
     await adapters[session.agent].send(sessionId, message)
   }
@@ -68,9 +110,9 @@ export class AgentManager {
   async respond(sessionId: string, requestId: string, allow: boolean): Promise<void> {
     const session = this.sessionOf(sessionId)
     await adapters[session.agent].respond(sessionId, requestId, allow)
-    this.update(session.projectId, (record) => ({
-      ...record,
-      items: setPermission(record.items, requestId, allow ? 'allowed' : 'denied')
+    history.update(session.projectId, session.conversationId, (c) => ({
+      ...c,
+      items: setPermission(c.items, requestId, allow ? 'allowed' : 'denied')
     }))
   }
 
@@ -86,38 +128,14 @@ export class AgentManager {
     await adapters[session.agent].stop(sessionId)
   }
 
-  /** Encerra a conversa do projeto e apaga o histórico. */
-  async forget(projectId: string): Promise<void> {
-    await this.stopProject(projectId)
-    await history.remove(projectId)
-  }
-
   async stopAll(): Promise<void> {
-    await Promise.allSettled([...this.sessions.keys()].map((id) => this.stop(id)))
+    await this.stopWhere(() => true)
     await history.flush()
   }
 
-  private async stopProject(projectId: string): Promise<void> {
-    const ids = [...this.sessions.values()].filter((s) => s.projectId === projectId).map((s) => s.id)
+  private async stopWhere(match: (session: AgentSession) => boolean): Promise<void> {
+    const ids = [...this.sessions.values()].filter(match).map((s) => s.id)
     await Promise.allSettled(ids.map((id) => this.stop(id)))
-  }
-
-  /** Aplica um evento ao histórico salvo do projeto. */
-  private record(projectId: string, event: AgentEvent): void {
-    this.update(projectId, (record) =>
-      event.type === 'resume-id'
-        ? { ...record, resumeId: event.resumeId }
-        : { ...record, items: applyEvent(record.items, event) }
-    )
-  }
-
-  /**
-   * Altera o histórico do projeto de forma síncrona. A conversa já está na memória
-   * desde start(); sem espera no meio, eventos seguidos nunca se sobrescrevem.
-   */
-  private update(projectId: string, change: (record: ChatRecord) => ChatRecord): void {
-    const record = history.cached(projectId)
-    if (record) history.save(projectId, change(record))
   }
 
   private sessionOf(sessionId: string): AgentSession {

@@ -33,16 +33,23 @@ const api: TreeApi = {
       remove: () => ipcRenderer.invoke('settings:geminiKey:remove')
     }
   },
+  conversations: {
+    list: (projectId) => ipcRenderer.invoke('conversations:list', projectId),
+    items: (projectId, id) => ipcRenderer.invoke('conversations:items', projectId, id),
+    create: (projectId, agent) => ipcRenderer.invoke('conversations:create', projectId, agent),
+    rename: (projectId, id, name) => ipcRenderer.invoke('conversations:rename', projectId, id, name),
+    remove: (projectId, id) => ipcRenderer.invoke('conversations:remove', projectId, id),
+    reorder: (projectId, ids) => ipcRenderer.invoke('conversations:reorder', projectId, ids),
+    removeAll: (projectId) => ipcRenderer.invoke('conversations:removeAll', projectId)
+  },
   agents: {
-    history: (projectId) => ipcRenderer.invoke('agents:history', projectId),
-    start: (projectId, agent, resume) =>
-      ipcRenderer.invoke('agents:start', projectId, agent, resume),
+    start: (projectId, conversationId) =>
+      ipcRenderer.invoke('agents:start', projectId, conversationId),
     send: (sessionId, message) => ipcRenderer.invoke('agents:send', sessionId, message),
     respond: (sessionId, requestId, allow) =>
       ipcRenderer.invoke('agents:respond', sessionId, requestId, allow),
     interrupt: (sessionId) => ipcRenderer.invoke('agents:interrupt', sessionId),
     stop: (sessionId) => ipcRenderer.invoke('agents:stop', sessionId),
-    forget: (projectId) => ipcRenderer.invoke('agents:forget', projectId),
     onEvent: (listener) => listen<AgentEvent>('agents:event', listener)
   }
 }

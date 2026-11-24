@@ -1,19 +1,22 @@
 // Conversa com um agente: histórico, pedidos de autorização e caixa de mensagem.
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { ChatItem, SessionStatus } from '../../../shared/types'
-import type { Chat } from '../hooks/useAgents'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import type { AgentId, ChatItem, SessionStatus } from '../../../shared/types'
+import type { Chat } from '../hooks/useConversations'
 import { Markdown } from './Markdown'
-import { Button, IconButton } from './ui/Button'
+import { Button } from './ui/Button'
 
 interface Props {
   chat: Chat
+  title: string
+  agent: AgentId
   agentName: string
   starting: boolean
   startError: string | null
+  /** Aviso opcional no topo da conversa (ex.: falta a chave do Gemini). */
+  banner?: ReactNode
   onSend(text: string): void
   onRespond(requestId: string, allow: boolean): void
   onInterrupt(): void
-  onForget(): void
 }
 
 const STATUS_LABEL: Record<SessionStatus, string> = {
@@ -26,10 +29,20 @@ const STATUS_LABEL: Record<SessionStatus, string> = {
 /** Distância do fim (em px) abaixo da qual a conversa segue rolando sozinha. */
 const STICKY_SCROLL = 80
 
+function statusText(chat: Chat, starting: boolean): string {
+  if (starting) return 'Iniciando…'
+  if (chat.sessionId === null && chat.status === 'idle') {
+    return chat.items.length === 0
+      ? 'Envie uma mensagem para começar.'
+      : 'Conversa salva. Envie uma mensagem para continuar.'
+  }
+  return STATUS_LABEL[chat.status]
+}
+
 export function ChatView(props: Props) {
-  const { chat, agentName, starting, startError, onSend, onRespond, onInterrupt, onForget } = props
+  const { chat, title, agent, agentName, starting, startError, banner, onSend, onRespond, onInterrupt } =
+    props
   const [draft, setDraft] = useState('')
-  const [confirmingForget, setConfirmingForget] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const stickToBottom = useRef(true)
 
@@ -42,12 +55,7 @@ export function ChatView(props: Props) {
 
   const busy = starting || chat.status === 'running' || chat.status === 'waiting'
   const canSend = draft.trim() !== '' && !busy
-
-  const status = starting
-    ? 'Iniciando…'
-    : chat.sessionId === null && chat.status === 'idle'
-      ? 'Conversa salva. Envie uma mensagem para continuar.'
-      : STATUS_LABEL[chat.status]
+  const status = statusText(chat, starting)
 
   const submit = (): void => {
     if (!canSend) return
@@ -67,29 +75,16 @@ export function ChatView(props: Props) {
   return (
     <div className="chat">
       <header className="chat__header">
-        <span className={`dot dot--${chat.agent}`} />
+        <span className={`dot dot--${agent}`} />
         <div className="card__body">
-          <div className="chat__title">{agentName}</div>
+          <div className="chat__title truncate">{title}</div>
           <div className="text-caption truncate" role="status" title={status}>
-            {status}
+            {agentName} · {status}
           </div>
         </div>
-        {confirmingForget ? (
-          <div className="chat__confirm">
-            <span className="text-caption">Apagar esta conversa?</span>
-            <Button variant="accent" onClick={onForget}>
-              Apagar
-            </Button>
-            <Button onClick={() => setConfirmingForget(false)}>Cancelar</Button>
-          </div>
-        ) : (
-          <IconButton
-            icon="compose"
-            label="Nova conversa (apaga esta)"
-            onClick={() => setConfirmingForget(true)}
-          />
-        )}
       </header>
+
+      {banner}
 
       <div
         className="chat__messages"

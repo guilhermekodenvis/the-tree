@@ -12,12 +12,21 @@ export interface Project {
 
 export type SessionStatus = 'idle' | 'running' | 'waiting' | 'error'
 
-/** Uma conversa de um agente dentro de um projeto, com um processo ativo. */
+/** Processo ativo de um agente, atendendo uma conversa. */
 export interface AgentSession {
   id: string
   projectId: string
+  conversationId: string
   agent: AgentId
   status: SessionStatus
+}
+
+/** Uma conversa com um agente, dentro de um projeto. Um projeto pode ter várias. */
+export interface Conversation {
+  id: string
+  projectId: string
+  agent: AgentId
+  name: string
 }
 
 /** O que um agente emite enquanto trabalha. */
@@ -48,12 +57,15 @@ export type ChatItem =
   | { kind: 'note'; id: string; text: string }
   | { kind: 'error'; id: string; text: string }
 
-/** Conversa salva de um projeto. Há no máximo uma por projeto. */
-export interface ChatRecord {
+/** Conversa como fica salva no disco. */
+export interface ConversationRecord {
+  id: string
   agent: AgentId
+  name: string
   items: ChatItem[]
   /** Usado para o agente retomar a conversa com a memória do que já foi dito. */
   resumeId?: string
+  createdAt: number
   updatedAt: number
 }
 
@@ -111,22 +123,30 @@ export interface TreeApi {
       remove(): Promise<void>
     }
   }
+  conversations: {
+    /** Conversas do projeto, na ordem escolhida. Não inicia nenhum processo. */
+    list(projectId: string): Promise<Conversation[]>
+    /** Itens já trocados numa conversa (histórico salvo). */
+    items(projectId: string, conversationId: string): Promise<ChatItem[]>
+    /** Cria uma conversa vazia; o agente só é iniciado na primeira mensagem. */
+    create(projectId: string, agent: AgentId): Promise<Conversation>
+    rename(projectId: string, conversationId: string, name: string): Promise<void>
+    /** Encerra o agente da conversa (se estiver rodando) e apaga o histórico dela. */
+    remove(projectId: string, conversationId: string): Promise<void>
+    /** Grava a nova ordem; `ids` traz as conversas do projeto na ordem desejada. */
+    reorder(projectId: string, ids: string[]): Promise<void>
+    /** Encerra e apaga todas as conversas do projeto (usado ao remover o projeto). */
+    removeAll(projectId: string): Promise<void>
+  }
   agents: {
-    /** Conversa salva do projeto, se houver. Não inicia nenhum processo. */
-    history(projectId: string): Promise<ChatRecord | null>
-    /**
-     * Inicia o agente no projeto. Com `resume`, continua a conversa salva
-     * (se for do mesmo agente); sem, começa uma nova.
-     */
-    start(projectId: string, agent: AgentId, resume: boolean): Promise<AgentSession>
+    /** Inicia o agente de uma conversa, retomando o que já foi dito nela. */
+    start(projectId: string, conversationId: string): Promise<AgentSession>
     send(sessionId: string, message: string): Promise<void>
     /** Responde a um pedido de autorização (evento 'permission'). */
     respond(sessionId: string, requestId: string, allow: boolean): Promise<void>
     /** Interrompe a resposta em andamento; a conversa continua aberta. */
     interrupt(sessionId: string): Promise<void>
     stop(sessionId: string): Promise<void>
-    /** Encerra a conversa do projeto e apaga o histórico salvo. */
-    forget(projectId: string): Promise<void>
     /** Devolve uma função para cancelar a escuta. */
     onEvent(listener: (event: AgentEvent) => void): () => void
   }

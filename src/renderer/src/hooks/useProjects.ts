@@ -1,21 +1,21 @@
-// Estado dos projetos na interface: lista, projeto ativo e as ações de adicionar/remover.
+// Lista de projetos e as ações de adicionar e remover.
 import { useCallback, useEffect, useState } from 'react'
 import type { Project } from '../../../shared/types'
 import { messageOf } from '../lib/errors'
 
 export interface ProjectsState {
   projects: Project[]
-  active: Project | null
+  /** A lista já foi lida do disco. */
+  loaded: boolean
   error: string | null
-  select(project: Project): void
-  /** Abre o seletor de pastas do Windows e cadastra a pasta escolhida. */
-  add(): Promise<void>
+  /** Abre o seletor de pastas do Windows. Devolve o projeto, ou null se cancelou. */
+  add(): Promise<Project | null>
   remove(project: Project): Promise<void>
 }
 
 export function useProjects(): ProjectsState {
   const [projects, setProjects] = useState<Project[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -23,17 +23,18 @@ export function useProjects(): ProjectsState {
       .list()
       .then(setProjects)
       .catch((err) => setError(messageOf(err)))
+      .finally(() => setLoaded(true))
   }, [])
 
   const add = useCallback(async () => {
     setError(null)
     try {
       const project = await window.api.projects.pick()
-      if (!project) return // usuário cancelou o seletor
-      setProjects(await window.api.projects.list())
-      setActiveId(project.id)
+      if (project) setProjects(await window.api.projects.list())
+      return project
     } catch (err) {
       setError(messageOf(err))
+      return null
     }
   }, [])
 
@@ -42,18 +43,10 @@ export function useProjects(): ProjectsState {
     try {
       await window.api.projects.remove(project.id)
       setProjects(await window.api.projects.list())
-      setActiveId((current) => (current === project.id ? null : current))
     } catch (err) {
       setError(messageOf(err))
     }
   }, [])
 
-  return {
-    projects,
-    active: projects.find((p) => p.id === activeId) ?? null,
-    error,
-    select: (project) => setActiveId(project.id),
-    add,
-    remove
-  }
+  return { projects, loaded, error, add, remove }
 }

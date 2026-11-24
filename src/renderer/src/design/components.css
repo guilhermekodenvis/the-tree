@@ -7,6 +7,13 @@
   color: var(--color-text-secondary);
 }
 
+.text-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  font-weight: var(--weight-semibold);
+}
+
 .text-subtitle {
   font-family: var(--font-display);
   font-size: var(--text-subtitle);
@@ -101,58 +108,6 @@
 
 .btn--danger:hover {
   color: var(--color-danger);
-}
-
-/* ---- Item de navegação (lista da barra lateral) ---------------------------- */
-.nav-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--size-nav-item);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
-  border-radius: var(--radius-control);
-  color: var(--color-text-primary);
-  transition: background var(--motion-fast) var(--motion-ease);
-}
-
-.nav-item:hover {
-  background: var(--color-subtle-hover);
-}
-
-.nav-item:active {
-  background: var(--color-subtle-pressed);
-}
-
-.nav-item--selected {
-  background: var(--color-subtle-hover);
-}
-
-/* Marcador de seleção do Windows 11: pílula vertical na cor de destaque. */
-.nav-item--selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 3px;
-  height: 16px;
-  border-radius: var(--radius-pill);
-  background: var(--color-accent);
-  transform: translateY(-50%);
-}
-
-.nav-item__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.nav-item__action {
-  opacity: 0;
-}
-
-.nav-item:hover .nav-item__action,
-.nav-item__action:focus-visible {
-  opacity: 1;
 }
 
 /* ---- Cartão --------------------------------------------------------------- */
@@ -641,4 +596,384 @@
 
 .key-form__remove:hover {
   color: var(--color-danger);
+}
+
+/* ---- Menu lateral: item ------------------------------------------------------- */
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: var(--size-nav-item);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  text-align: left;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.nav-link:hover {
+  background: var(--color-subtle-hover);
+}
+
+.nav-link:active {
+  background: var(--color-subtle-pressed);
+}
+
+/* Item ativo: fundo leve e a pílula de destaque do Windows 11 à esquerda. */
+.nav-link--active {
+  background: var(--color-subtle-hover);
+}
+
+.nav-link--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: translateY(-50%);
+}
+
+.nav-link--active .icon {
+  color: var(--color-accent);
+}
+
+.nav--collapsed .nav-link__label {
+  display: none;
+}
+
+/* ---- Abas -------------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control) var(--radius-control) 0 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: color var(--motion-fast) var(--motion-ease);
+}
+
+.tab:hover {
+  color: var(--color-text-primary);
+  background: var(--color-subtle-hover);
+}
+
+.tab--active {
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+}
+
+/* Traço de destaque embaixo da aba ativa. */
+.tab--active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 16px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: translateX(-50%);
+}
+
+.tab--active .icon {
+  color: var(--color-accent);
+}
+
+/* ---- Link de volta (breadcrumb) ------------------------------------------------ */
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+/* ---- Tela de projetos ---------------------------------------------------------- */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--size-project-card), 1fr));
+  gap: var(--space-3);
+}
+
+.project-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--motion-fast) var(--motion-ease);
+}
+
+.project-card:hover {
+  border-color: var(--color-stroke-strong);
+}
+
+.project-card__open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-surface);
+  background: transparent;
+  text-align: left;
+}
+
+.project-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-surface);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
+}
+
+.project-card__name {
+  font-weight: var(--weight-semibold);
+}
+
+.project-card__remove {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  opacity: 0;
+}
+
+.project-card:hover .project-card__remove,
+.project-card__remove:focus-visible {
+  opacity: 1;
+}
+
+.project-card--confirm {
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.project-card__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* ---- Lista de agentes ------------------------------------------------------------ */
+.agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--size-nav-item);
+  padding: 0 var(--space-1) 0 0;
+  border-radius: var(--radius-control);
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.agent-item:hover {
+  background: var(--color-subtle-hover);
+}
+
+.agent-item--selected {
+  background: var(--color-subtle-hover);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
+.agent-item--dragging {
+  opacity: 0.4;
+}
+
+/* Linha que mostra onde o item arrastado vai cair. */
+.agent-item--drop-before::before,
+.agent-item--drop-after::after {
+  content: '';
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+}
+
+.agent-item--drop-before::before {
+  top: -2px;
+}
+
+.agent-item--drop-after::after {
+  bottom: -2px;
+}
+
+.agent-item__grip {
+  display: inline-flex;
+  width: var(--space-4);
+  padding-left: var(--space-1);
+  color: var(--color-text-tertiary);
+  cursor: grab;
+  opacity: 0;
+}
+
+.agent-item:hover .agent-item__grip {
+  opacity: 1;
+}
+
+.agent-item__open {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  height: var(--size-nav-item);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.agent-item__actions {
+  display: flex;
+  opacity: 0;
+}
+
+.agent-item:hover .agent-item__actions,
+.agent-item__actions:focus-within {
+  opacity: 1;
+}
+
+.agent-item__input {
+  flex: 1;
+  height: 28px;
+  padding: 0 var(--space-2);
+}
+
+.agent-item--confirm {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-subtle-hover);
+}
+
+.agent-item__confirm-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Ponto pulsando: o agente está trabalhando. */
+.dot--busy {
+  animation: dot-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dot-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---- Menu suspenso (flyout) ------------------------------------------------------ */
+.popover-anchor {
+  position: relative;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: var(--size-popover);
+  padding: var(--space-1);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-flyout);
+  box-shadow: var(--shadow-flyout);
+}
+
+.popover__title {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.popover__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--size-nav-item);
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-text-primary);
+  text-align: left;
+}
+
+.popover__item:hover,
+.popover__item:focus-visible {
+  background: var(--color-subtle-hover);
+}
+
+.popover__item .card__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.popover__item-name {
+  font-weight: var(--weight-semibold);
+}
+
+.popover__divider {
+  margin: var(--space-1) 0;
+  border: 0;
+  border-top: 1px solid var(--color-stroke);
+}
+
+/* ---- Aviso no topo da conversa --------------------------------------------------- */
+.chat__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--color-stroke);
+  background: var(--color-accent-subtle);
+}
+
+.key-card {
+  width: 100%;
+  max-width: 480px;
 }

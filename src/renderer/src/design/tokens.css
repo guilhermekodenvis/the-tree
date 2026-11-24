@@ -20,6 +20,7 @@
   --color-bg-base: light-dark(#f3f3f3, #202020); /* fundo da janela e da barra lateral */
   --color-bg-layer: light-dark(#fbfbfb, #272727); /* área de trabalho, por cima da base */
   --color-bg-card: light-dark(#ffffff, #2d2d2d); /* cartões dentro da área de trabalho */
+  --color-bg-flyout: light-dark(#f9f9f9, #2c2c2c); /* menus suspensos */
 
   /* ---- Cores: texto ------------------------------------------------------ */
   --color-text-primary: light-dark(rgb(0 0 0 / 0.9), #ffffff);
@@ -93,6 +94,7 @@
 
   /* ---- Sombras ----------------------------------------------------------- */
   --shadow-card: 0 2px 4px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.13));
+  --shadow-flyout: 0 8px 16px light-dark(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.26));
 
   /* ---- Movimento --------------------------------------------------------- */
   --motion-fast: 83ms;
@@ -101,11 +103,13 @@
 
   /* ---- Medidas do layout ------------------------------------------------- */
   --size-titlebar: 40px; /* igual a TITLEBAR_HEIGHT em src/shared/theme.ts */
-  --size-sidebar: 280px;
-  --size-agents: 420px;
+  --size-nav: 240px; /* menu lateral aberto */
+  --size-nav-collapsed: 48px; /* menu lateral recolhido: só os ícones */
   --size-control: 32px;
-  --size-nav-item: 52px;
+  --size-nav-item: 36px;
   --size-icon: 16px;
-  --size-file-tree: 260px;
+  --size-side-list: 260px; /* lista lateral das abas (arquivos, agentes) */
   --size-tree-item: 28px;
+  --size-project-card: 280px; /* largura mínima de um card na tela de projetos */
+  --size-popover: 260px;
 }
