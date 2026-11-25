@@ -83,6 +83,7 @@ export function AgentsTab({ project, conversations: state, visible }: Props) {
         ) : (
           <ChatView
             key={conversation.id}
+            projectId={project.id}
             chat={state.chatOf(conversation.id) ?? { sessionId: null, status: 'idle', items: [], loaded: false }}
             title={conversation.name}
             visible={visible}

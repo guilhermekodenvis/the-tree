@@ -193,6 +193,11 @@ export interface TreeApi {
     watch(projectId: string): Promise<void>
     unwatch(projectId: string): Promise<void>
     onChanged(listener: (change: FilesChanged) => void): () => void
+    /**
+     * Lê um arquivo .md/.mdx citado numa conversa (pode estar fora do projeto).
+     * Caminho relativo vale a partir de `base` (arquivo aberto) ou do projeto.
+     */
+    readMarkdown(projectId: string, path: string, base?: string): Promise<{ path: string; content: string }>
   }
   settings: {
     /**

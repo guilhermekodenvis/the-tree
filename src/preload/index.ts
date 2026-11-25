@@ -32,7 +32,8 @@ const api: TreeApi = {
       ipcRenderer.invoke('files:write', projectId, path, content),
     watch: (projectId) => ipcRenderer.invoke('files:watch', projectId),
     unwatch: (projectId) => ipcRenderer.invoke('files:unwatch', projectId),
-    onChanged: (listener) => listen<FilesChanged>('files:changed', listener)
+    onChanged: (listener) => listen<FilesChanged>('files:changed', listener),
+    readMarkdown: (projectId, path, base) => ipcRenderer.invoke('files:readMarkdown', projectId, path, base)
   },
   settings: {
     geminiKey: {

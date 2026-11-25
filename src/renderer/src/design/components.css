@@ -2463,3 +2463,110 @@ button.group__title:hover {
   background: var(--color-accent-subtle);
   color: var(--color-text-primary);
 }
+
+/* ---- Leitor de .md/.mdx ao lado da conversa ------------------------------------------ */
+.chat-layout {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.chat-layout > .chat {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Com o leitor aberto a conversa fica estreita: o nome dela não pode sumir e
+   os controles descem para uma segunda linha em vez de sair da tela. */
+.chat-layout .chat__header .card__body {
+  min-width: 96px;
+}
+
+.chat-layout .chat__header {
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
+}
+
+.markdown a.file-link {
+  cursor: pointer;
+}
+
+.markdown a.file-link code {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.markdown__image-missing {
+  color: var(--color-text-tertiary);
+  font-size: var(--text-caption);
+}
+
+.reader {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: var(--size-reader);
+  max-width: 55%;
+  min-height: 0;
+  border-left: 1px solid var(--color-stroke);
+  background: var(--color-bg-card);
+}
+
+.reader__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-stroke);
+}
+
+.reader__header > .icon {
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+
+.reader__name {
+  font-weight: var(--weight-semibold);
+}
+
+.reader__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-5) var(--space-6) var(--space-8);
+  overflow-y: auto;
+}
+
+.reader__body .markdown {
+  user-select: text;
+}
+
+.reader__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-5);
+  padding: var(--space-3);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-layer);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.reader__meta-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-3);
+}
+
+.reader__meta dt {
+  color: var(--color-text-tertiary);
+}
+
+.reader__meta dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+  user-select: text;
+}

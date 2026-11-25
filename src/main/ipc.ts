@@ -5,6 +5,7 @@ import type { AgentId, AgentSettings } from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
+import { readMarkdown } from './files/markdown'
 import * as skills from './skills/store'
 import { AgentManager } from './agents/manager'
 import { AutomationEngine, type EngineHooks } from './automations/engine'
@@ -68,6 +69,9 @@ export function registerIpc(hooks: Pick<EngineHooks, 'notify'>): {
   )
   ipcMain.handle('files:watch', (_e, projectId: string) =>
     watcher.watch(projectId, (change) => broadcast('files:changed', change))
+  )
+  ipcMain.handle('files:readMarkdown', (_e, projectId: string, path: string, base?: string) =>
+    readMarkdown(projectId, String(path ?? ''), typeof base === 'string' ? base : undefined)
   )
   ipcMain.handle('files:unwatch', (_e, projectId: string) => watcher.unwatch(projectId))
 

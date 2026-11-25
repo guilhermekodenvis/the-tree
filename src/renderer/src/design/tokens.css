@@ -119,6 +119,7 @@
   --size-popover-wide: 360px;
   --size-flow-node: 280px; /* cartão de um passo no quadro das automações */
   --size-step-panel: 400px; /* painel lateral que configura um passo */
-  --size-runs-list: 260px; /* lista de execuções de uma automação */ /* menus com nome e descrição (skills) */
+  --size-runs-list: 260px; /* lista de execuções de uma automação */
+  --size-reader: 500px; /* leitor de .md/.mdx ao lado da conversa */ /* menus com nome e descrição (skills) */
   --size-skill-menu-height: 280px; /* altura máxima do menu "/" da conversa */
 }

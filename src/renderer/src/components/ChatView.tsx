@@ -1,14 +1,17 @@
 // Conversa com um agente: histórico, pedidos de autorização e caixa de mensagem.
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { agentInfo, type Choice } from '../../../shared/agents'
 import type { AgentId, AgentSettings, ChatItem, SessionStatus, Skill } from '../../../shared/types'
 import type { Chat } from '../hooks/useConversations'
 import { Composer } from './Composer'
 import { Markdown } from './Markdown'
+import { MarkdownReader } from './MarkdownReader'
 import { Button } from './ui/Button'
 import { Icon } from './ui/Icon'
 
 interface Props {
+  /** Projeto da conversa (caminhos relativos nos links partem dele). */
+  projectId: string
   chat: Chat
   title: string
   /**
@@ -57,6 +60,7 @@ function statusText(chat: Chat, starting: boolean): string {
 
 export function ChatView(props: Props) {
   const {
+    projectId,
     chat,
     title,
     visible,
@@ -100,86 +104,111 @@ export function ChatView(props: Props) {
   const busy = starting || chat.status === 'running' || chat.status === 'waiting'
   const status = statusText(chat, starting)
 
+  // Leitor de .md/.mdx à direita. Pilha: seguir um link dentro do arquivo empilha,
+  // "voltar" desempilha; abrir pela conversa começa de novo.
+  const [reader, setReader] = useState<{ path: string; base?: string }[]>([])
+  const openFile = useCallback((path: string) => setReader([{ path }]), [])
+  const current = reader[reader.length - 1]
+
   return (
-    <div className="chat">
-      <header className="chat__header">
-        <span className={`dot dot--${agent}`} />
-        <div className="card__body">
-          <div className="chat__title truncate">{title}</div>
-          <div className="text-caption truncate" role="status" title={status}>
-            {agentName} · {status}
+    <div className="chat-layout">
+      <div className="chat">
+        <header className="chat__header">
+          <span className={`dot dot--${agent}`} />
+          <div className="card__body">
+            <div className="chat__title truncate">{title}</div>
+            <div className="text-caption truncate" role="status" title={status}>
+              {agentName} · {status}
+            </div>
           </div>
-        </div>
-        <ChoiceSelect
-          label="Modelo"
-          choices={info?.models ?? []}
-          value={settings.model}
-          onChange={(model) => onSettingsChange({ model })}
-        />
-        <ChoiceSelect
-          label="Esforço"
-          choices={info?.efforts ?? []}
-          value={settings.effort}
-          onChange={(effort) => onSettingsChange({ effort })}
-        />
-        <button
-          type="button"
-          role="switch"
-          aria-checked={bypass}
-          className="switch"
-          title={
-            bypass
-              ? `Bypass ligado: o ${agentName} altera arquivos e roda comandos sem perguntar.`
-              : `Ligue para o ${agentName} agir sem pedir autorização a cada passo.`
-          }
-          onClick={() => onBypassChange(!bypass)}
+          <ChoiceSelect
+            label="Modelo"
+            choices={info?.models ?? []}
+            value={settings.model}
+            onChange={(model) => onSettingsChange({ model })}
+          />
+          <ChoiceSelect
+            label="Esforço"
+            choices={info?.efforts ?? []}
+            value={settings.effort}
+            onChange={(effort) => onSettingsChange({ effort })}
+          />
+          <button
+            type="button"
+            role="switch"
+            aria-checked={bypass}
+            className="switch"
+            title={
+              bypass
+                ? `Bypass ligado: o ${agentName} altera arquivos e roda comandos sem perguntar.`
+                : `Ligue para o ${agentName} agir sem pedir autorização a cada passo.`
+            }
+            onClick={() => onBypassChange(!bypass)}
+          >
+            Bypass
+            <span className="switch__track">
+              <span className="switch__thumb" />
+            </span>
+          </button>
+        </header>
+
+        {banner}
+
+        <div
+          className="chat__messages"
+          ref={listRef}
+          onScroll={(event) => {
+            const list = event.currentTarget
+            stickToBottom.current =
+              list.scrollHeight - list.scrollTop - list.clientHeight < STICKY_SCROLL
+          }}
         >
-          Bypass
-          <span className="switch__track">
-            <span className="switch__thumb" />
-          </span>
-        </button>
-      </header>
+          {chat.items.length === 0 && (
+            <p className="text-caption">
+              {bypass
+                ? `Peça algo sobre este projeto. Com o bypass ligado, o ${agentName} altera arquivos e roda comandos sem perguntar.`
+                : `Peça algo sobre este projeto. O ${agentName} lê os arquivos livremente e pede a sua autorização antes de alterar algo ou rodar comandos.`}
+            </p>
+          )}
+          {chat.items.map((item) => (
+            <ChatItemView
+              key={`${item.kind}-${item.id}`}
+              item={item}
+              onRespond={onRespond}
+              onOpenFile={openFile}
+            />
+          ))}
+          {startError && (
+            <p className="notice" role="alert">
+              {startError}
+            </p>
+          )}
+        </div>
 
-      {banner}
-
-      <div
-        className="chat__messages"
-        ref={listRef}
-        onScroll={(event) => {
-          const list = event.currentTarget
-          stickToBottom.current =
-            list.scrollHeight - list.scrollTop - list.clientHeight < STICKY_SCROLL
-        }}
-      >
-        {chat.items.length === 0 && (
-          <p className="text-caption">
-            {bypass
-              ? `Peça algo sobre este projeto. Com o bypass ligado, o ${agentName} altera arquivos e roda comandos sem perguntar.`
-              : `Peça algo sobre este projeto. O ${agentName} lê os arquivos livremente e pede a sua autorização antes de alterar algo ou rodar comandos.`}
-          </p>
-        )}
-        {chat.items.map((item) => (
-          <ChatItemView key={`${item.kind}-${item.id}`} item={item} onRespond={onRespond} />
-        ))}
-        {startError && (
-          <p className="notice" role="alert">
-            {startError}
-          </p>
-        )}
+        <Composer
+          agentName={agentName}
+          busy={busy}
+          canInterrupt={busy && !starting}
+          loadSkills={loadSkills}
+          onSend={(text, skills) => {
+            stickToBottom.current = true
+            onSend(text, skills)
+          }}
+          onInterrupt={onInterrupt}
+        />
       </div>
-
-      <Composer
-        agentName={agentName}
-        busy={busy}
-        canInterrupt={busy && !starting}
-        loadSkills={loadSkills}
-        onSend={(text, skills) => {
-          stickToBottom.current = true
-          onSend(text, skills)
-        }}
-        onInterrupt={onInterrupt}
-      />
+      {current && (
+        <MarkdownReader
+          key={`${current.base ?? ''}|${current.path}`}
+          projectId={projectId}
+          path={current.path}
+          base={current.base}
+          canGoBack={reader.length > 1}
+          onBack={() => setReader((stack) => stack.slice(0, -1))}
+          onNavigate={(path, base) => setReader((stack) => [...stack, { path, base }])}
+          onClose={() => setReader([])}
+        />
+      )}
     </div>
   )
 }
@@ -217,10 +246,13 @@ function ChoiceSelect({
 /** Um item da conversa (também usado no histórico das automações). */
 export function ChatItemView({
   item,
-  onRespond
+  onRespond,
+  onOpenFile
 }: {
   item: ChatItem
   onRespond(requestId: string, allow: boolean): void
+  /** Abre um .md/.mdx citado na resposta no leitor ao lado. */
+  onOpenFile?(path: string): void
 }) {
   switch (item.kind) {
     case 'user':
@@ -240,7 +272,7 @@ export function ChatItemView({
         </div>
       )
     case 'assistant':
-      return <Markdown text={item.text} />
+      return <Markdown text={item.text} onOpenFile={onOpenFile} />
     case 'tool':
       return (
         <div className="tool-line" title={item.detail}>
