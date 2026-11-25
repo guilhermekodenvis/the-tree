@@ -7,7 +7,7 @@ import ReactMarkdown, { defaultUrlTransform, type Components } from 'react-markd
 import remarkGfm from 'remark-gfm'
 
 /** Caminho de arquivo Markdown (não um endereço da web). */
-export function isMarkdownPath(href: string | undefined | null): href is string {
+export function isMarkdownPath(href: string | undefined | null): boolean {
   if (!href) return false
   if (/^(https?|mailto|tel):/i.test(href)) return false
   const path = href.replace(/#.*$/, '').replace(/:(\d+)(:\d+)?$/, '')
@@ -98,7 +98,7 @@ export const Markdown = memo(function Markdown({ text, onOpenFile }: Props) {
     )
     return {
       a: ({ href, children }) =>
-        isMarkdownPath(href) ? (
+        href && isMarkdownPath(href) ? (
           fileLink(href, children)
         ) : href?.startsWith('#') ? (
           // Âncora para uma seção do próprio texto: rola até ela.
