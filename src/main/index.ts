@@ -1,9 +1,44 @@
 // Processo principal: cria a janela e liga os serviços.
-import { app, BrowserWindow, nativeTheme, shell } from 'electron'
+//
+// Fechar a janela não encerra o app: ele fica na bandeja do Windows para as
+// automações dispararem no horário. Só "Sair", no menu do ícone, encerra.
+import { app, BrowserWindow, nativeTheme, Notification, shell } from 'electron'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { TITLEBAR_HEIGHT, windowChrome } from '../shared/theme'
+import appIcon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
 import { unwatchAll } from './files/watcher'
+import { createTray, ensureStartWithWindows, HIDDEN_ARG } from './tray'
+
+let mainWindow: BrowserWindow | null = null
+let quitting = false
+
+/** Estado do app entre aberturas (primeira execução, aviso da bandeja já mostrado). */
+interface AppState {
+  launched?: boolean
+  trayHintShown?: boolean
+}
+const stateFile = (): string => join(app.getPath('userData'), 'app-state.json')
+async function readState(): Promise<AppState> {
+  try {
+    return JSON.parse(await readFile(stateFile(), 'utf8')) as AppState
+  } catch {
+    return {}
+  }
+}
+async function writeState(state: AppState): Promise<void> {
+  await writeFile(stateFile(), JSON.stringify(state), 'utf8').catch(() => undefined)
+}
+
+/** Mostra a janela (criando de novo se preciso) e a traz para a frente. */
+function showWindow(): BrowserWindow {
+  if (!mainWindow || mainWindow.isDestroyed()) mainWindow = createWindow(true)
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+  return mainWindow
+}
 
 function chrome() {
   return nativeTheme.shouldUseDarkColors ? windowChrome.dark : windowChrome.light
@@ -19,8 +54,10 @@ function openExternal(url: string): void {
   }
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(visible: boolean): BrowserWindow {
   const win = new BrowserWindow({
+    show: false,
+    icon: appIcon,
     width: 1400,
     height: 900,
     minWidth: 1200,
@@ -62,6 +99,24 @@ function createWindow(): BrowserWindow {
     openExternal(url)
   })
 
+  if (visible) win.once('ready-to-show', () => win.show())
+
+  // Fechar esconde: o app segue na bandeja. Na primeira vez, avisa onde ele ficou.
+  win.on('close', (event) => {
+    if (quitting) return
+    event.preventDefault()
+    win.hide()
+    void readState().then((state) => {
+      if (state.trayHintShown || !Notification.isSupported()) return
+      new Notification({
+        title: 'O The Tree continua rodando',
+        body: 'Ele fica na bandeja, ao lado do relógio, para as automações rodarem no horário. Para encerrar, clique com o botão direito no ícone e escolha Sair.',
+        icon: appIcon
+      }).show()
+      void writeState({ ...state, trayHintShown: true })
+    })
+  })
+
   // Em desenvolvimento o electron-vite serve a interface por URL; em produção é um arquivo.
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) {
@@ -78,34 +133,44 @@ function createWindow(): BrowserWindow {
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {
-  app.on('second-instance', () => {
-    const win = BrowserWindow.getAllWindows()[0]
-    if (!win) return
-    if (win.isMinimized()) win.restore()
-    win.focus()
-  })
-  app.whenReady().then(start)
+  app.on('second-instance', () => showWindow())
+  app.whenReady().then(() => void start())
 }
 
-function start(): void {
-  const agents = registerIpc()
-  createWindow()
+async function start(): Promise<void> {
+  app.setAppUserModelId('com.thetree.app')
+  const { agents, engine } = registerIpc({
+    notify(title, body, target) {
+      if (!Notification.isSupported()) return
+      const note = new Notification({ title, body, icon: appIcon })
+      // Clicar no aviso abre a execução na aba Automações do projeto.
+      note.on('click', () => showWindow().webContents.send('automations:open', target))
+      note.show()
+    }
+  })
 
-  // Ao sair, encerra os agentes e grava o histórico antes de fechar de vez.
-  let quitting = false
+  const state = await readState()
+  ensureStartWithWindows(!state.launched)
+  if (!state.launched) await writeState({ ...state, launched: true })
+
+  // Aberto pelo Windows ao ligar: começa escondido, só na bandeja.
+  mainWindow = createWindow(!process.argv.includes(HIDDEN_ARG))
+  createTray({ show: () => void showWindow(), quit: () => app.quit() })
+  await engine.init()
+
+  // Ao sair, encerra agentes e automações e grava o histórico antes de fechar de vez.
+  let stopping = false
   app.on('before-quit', (event) => {
-    if (quitting) return
     quitting = true
+    if (stopping) return
+    stopping = true
     event.preventDefault()
     unwatchAll()
-    agents.stopAll().finally(() => app.quit())
+    Promise.allSettled([engine.stopAll(), agents.stopAll()]).finally(() => app.quit())
   })
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
+  app.on('activate', () => showWindow())
 }
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+// Sem janelas abertas o app continua na bandeja (as automações seguem valendo).
+app.on('window-all-closed', () => undefined)

@@ -4,7 +4,7 @@
 // Em Projetos, os projetos abertos ficam em abas, como num navegador. Cada
 // projeto aberto continua montado mesmo fora da frente, para a árvore de
 // arquivos, o arquivo aberto e a conversa estarem como você deixou ao voltar.
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { Project } from '../../shared/types'
 import { useConversations } from './hooks/useConversations'
 import { useOpenProjects } from './hooks/useOpenProjects'
@@ -14,6 +14,8 @@ import { ProjectScreen } from './components/ProjectScreen'
 import { ProjectsScreen } from './components/ProjectsScreen'
 import { ProjectTabs } from './components/ProjectTabs'
 import { SkillsScreen } from './components/SkillsScreen'
+import { ConnectorsScreen } from './components/ConnectorsScreen'
+import type { OpenRunTarget } from './components/automations/AutomationsTab'
 import { Button } from './components/ui/Button'
 import { Icon } from './components/ui/Icon'
 
@@ -36,6 +38,23 @@ export function App() {
   /** Tela de escolher projeto aberta (pelo + ou por "Selecionar projeto"). */
   const [picking, setPicking] = useState(false)
   const [collapsed, setCollapsed] = useState(readCollapsed)
+  /** Execução a abrir (clique num aviso do Windows), por projeto. */
+  const [openRun, setOpenRun] = useState<(OpenRunTarget & { projectId: string }) | null>(null)
+  const clearOpenRun = useCallback(() => setOpenRun(null), [])
+
+  // Clique num aviso de automação: abre o projeto na aba Automações, na execução.
+  const { openProject: openTab, setTab } = tabs
+  useEffect(
+    () =>
+      window.api.automations.onOpen((target) => {
+        setSection('projects')
+        setPicking(false)
+        openTab(target.projectId)
+        setTab(target.projectId, 'automations')
+        setOpenRun(target)
+      }),
+    [openTab, setTab]
+  )
 
   // Projeto removido (ou que sumiu da lista): a aba dele fecha.
   const { keepOnly } = tabs
@@ -104,6 +123,7 @@ export function App() {
         )}
 
         {section === 'skills' && <SkillsScreen />}
+        {section === 'connectors' && <ConnectorsScreen />}
 
         {showPicker && (
           <ProjectsScreen state={projects} onOpen={openProject} onRemove={removeProject} />
@@ -133,6 +153,8 @@ export function App() {
             tab={tabs.tabOf(project.id)}
             conversations={conversations}
             onTabChange={(tab) => tabs.setTab(project.id, tab)}
+            openRun={openRun?.projectId === project.id ? openRun : null}
+            onRunOpened={clearOpenRun}
           />
         ))}
       </div>

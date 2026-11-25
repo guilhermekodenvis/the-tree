@@ -8,13 +8,21 @@
     "dev": "electron-vite dev --watch",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-vite build && electron-builder --win --x64"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^2.10.0",
     "@anthropic-ai/claude-agent-sdk": "^0.3.331",
+    "@codemirror/autocomplete": "^6.20.4",
+    "@codemirror/commands": "^6.11.2",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.44.0",
     "@google/gemini-cli": "^0.71.1",
     "@openai/codex": "^0.172.0",
+    "nodemailer": "^10.6.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
@@ -22,12 +30,49 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
     "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
+  },
+  "build": {
+    "appId": "com.thetree.app",
+    "productName": "The Tree",
+    "directories": {
+      "output": "dist",
+      "buildResources": "resources"
+    },
+    "files": [
+      "out/**",
+      "resources/**",
+      "package.json"
+    ],
+    "asar": false,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "resources/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "The Tree",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
   }
 }

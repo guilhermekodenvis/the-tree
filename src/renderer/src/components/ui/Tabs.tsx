@@ -7,6 +7,8 @@ export interface TabItem<T extends string> {
   id: T
   label: string
   icon?: IconName
+  /** Bolinha de aviso ao lado do nome (algo novo para ver). */
+  badge?: boolean
 }
 
 interface Props<T extends string> {
@@ -44,6 +46,7 @@ export function Tabs<T extends string>({ tabs, active, onChange, label }: Props<
           >
             {tab.icon && <Icon name={tab.icon} />}
             {tab.label}
+            {tab.badge && <span className="badge-dot" aria-label="Há novidades" />}
           </button>
         )
       })}

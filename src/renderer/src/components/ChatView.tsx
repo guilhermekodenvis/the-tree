@@ -160,7 +160,7 @@ export function ChatView(props: Props) {
           </p>
         )}
         {chat.items.map((item) => (
-          <Item key={`${item.kind}-${item.id}`} item={item} onRespond={onRespond} />
+          <ChatItemView key={`${item.kind}-${item.id}`} item={item} onRespond={onRespond} />
         ))}
         {startError && (
           <p className="notice" role="alert">
@@ -214,7 +214,8 @@ function ChoiceSelect({
   )
 }
 
-function Item({
+/** Um item da conversa (também usado no histórico das automações). */
+export function ChatItemView({
   item,
   onRespond
 }: {

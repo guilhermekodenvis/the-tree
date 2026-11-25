@@ -37,8 +37,10 @@
   --color-on-accent-disabled: light-dark(#ffffff, rgb(255 255 255 / 0.53));
   --color-accent-subtle: light-dark(rgb(0 95 184 / 0.1), rgb(96 205 255 / 0.14));
 
-  /* ---- Cores: perigo ----------------------------------------------------- */
+  /* ---- Cores: perigo, sucesso e atenção ---------------------------------- */
   --color-danger: light-dark(#c42b1c, #ff99a4);
+  --color-success: light-dark(#0f7b0f, #6ccb5f);
+  --color-warning: light-dark(#9d5d00, #fce100);
 
   /* ---- Cores: preenchimentos de controles -------------------------------- */
   --color-control: light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.06));
@@ -114,6 +116,9 @@
   --size-popover: 260px;
   --size-project-tab: 220px; /* largura de uma aba de projeto aberto */
   --size-project-tab-min: 96px; /* menor largura antes de a aba deixar de encolher */
-  --size-popover-wide: 360px; /* menus com nome e descrição (skills) */
+  --size-popover-wide: 360px;
+  --size-flow-node: 280px; /* cartão de um passo no quadro das automações */
+  --size-step-panel: 400px; /* painel lateral que configura um passo */
+  --size-runs-list: 260px; /* lista de execuções de uma automação */ /* menus com nome e descrição (skills) */
   --size-skill-menu-height: 280px; /* altura máxima do menu "/" da conversa */
 }

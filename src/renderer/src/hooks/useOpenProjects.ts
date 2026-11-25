@@ -78,20 +78,30 @@ export function useOpenProjects(): OpenProjectsState {
     })
   }, [])
 
-  return {
-    open: state.open,
-    active: state.active,
-    tabOf: (projectId) => state.tabs[projectId] ?? 'files',
-    openProject: (projectId) =>
+  const openProject = useCallback(
+    (projectId: string) =>
       setState((prev) => ({
         ...prev,
         open: prev.open.includes(projectId) ? prev.open : [...prev.open, projectId],
         active: projectId
       })),
+    []
+  )
+
+  const setTab = useCallback(
+    (projectId: string, tab: ProjectTab) =>
+      setState((prev) => ({ ...prev, tabs: { ...prev.tabs, [projectId]: tab } })),
+    []
+  )
+
+  return {
+    open: state.open,
+    active: state.active,
+    tabOf: (projectId) => state.tabs[projectId] ?? 'files',
+    openProject,
     activate: (projectId) => setState((prev) => ({ ...prev, active: projectId })),
     close,
-    setTab: (projectId, tab) =>
-      setState((prev) => ({ ...prev, tabs: { ...prev.tabs, [projectId]: tab } })),
+    setTab,
     keepOnly
   }
 }

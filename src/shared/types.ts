@@ -1,4 +1,13 @@
 // Tipos compartilhados entre o processo principal e a interface.
+import type {
+  Automation,
+  AutomationRun,
+  AutomationSummary,
+  Connector,
+  ConnectorInput,
+  RunSummary
+} from './automation'
+
 // Este arquivo é o "contrato" do app: mudar aqui muda os dois lados.
 
 export type AgentId = 'claude' | 'codex' | 'gemini'
@@ -216,6 +225,38 @@ export interface TreeApi {
     /** Traz uma skill global para a aba Skills do projeto. */
     importToProject(projectId: string, skillId: string): Promise<void>
     removeFromProject(projectId: string, skillId: string): Promise<void>
+  }
+  system: {
+    /** Abre a pasta do arquivo no Explorer, com ele selecionado. */
+    showInFolder(path: string): Promise<void>
+  }
+  connectors: {
+    list(): Promise<Connector[]>
+    /** Cria (sem id) ou altera. Sem senha, a senha salva continua. */
+    save(input: ConnectorInput): Promise<Connector>
+    remove(id: string): Promise<void>
+    /** Envia um e-mail de teste para o próprio endereço; devolve o endereço. */
+    test(id: string): Promise<string>
+  }
+  automations: {
+    list(projectId: string): Promise<AutomationSummary[]>
+    /** Execuções que falharam ou aguardam você e ainda não foram vistas. */
+    unseen(projectId: string): Promise<number>
+    create(projectId: string, name?: string): Promise<Automation>
+    save(automation: Automation): Promise<AutomationSummary>
+    remove(id: string): Promise<void>
+    /** "Rodar agora": devolve o id da execução (pode ficar na fila). */
+    run(id: string): Promise<string>
+    runs(id: string): Promise<RunSummary[]>
+    getRun(id: string, runId: string): Promise<AutomationRun>
+    markSeen(id: string, runId: string): Promise<void>
+    cancel(id: string, runId: string): Promise<void>
+    /** Aprova (continua) ou recusa (encerra) uma execução esperando aprovação. */
+    decide(id: string, runId: string, approve: boolean): Promise<void>
+    /** Algo mudou nas automações do projeto (devolve a função para parar de ouvir). */
+    onChanged(listener: (projectId: string) => void): () => void
+    /** Clique num aviso do Windows: abrir esta execução. */
+    onOpen(listener: (target: { projectId: string; automationId: string; runId: string }) => void): () => void
   }
   conversations: {
     /** Conversas do projeto, na ordem escolhida. Não inicia nenhum processo. */

@@ -1,11 +1,14 @@
 // Liga cada chamada da interface (window.api.*) ao serviço correspondente.
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import type { Automation, ConnectorInput } from '../shared/automation'
 import type { AgentId, AgentSettings } from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
 import * as skills from './skills/store'
 import { AgentManager } from './agents/manager'
+import { AutomationEngine, type EngineHooks } from './automations/engine'
+import * as connectors from './connectors/store'
 import { hasSecret, removeSecret, setSecret } from './secrets'
 
 /** Envia um aviso para todas as janelas abertas. */
@@ -13,8 +16,15 @@ function broadcast(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) win.webContents.send(channel, payload)
 }
 
-export function registerIpc(): AgentManager {
+export function registerIpc(hooks: Pick<EngineHooks, 'notify'>): {
+  agents: AgentManager
+  engine: AutomationEngine
+} {
   const agents = new AgentManager((event) => broadcast('agents:event', event))
+  const engine = new AutomationEngine({
+    notify: hooks.notify,
+    changed: (projectId) => broadcast('automations:changed', projectId)
+  })
 
   ipcMain.handle('projects:list', () => projects.list())
   ipcMain.handle('projects:add', (_e, path: string, groupId: string | null) =>
@@ -23,6 +33,7 @@ export function registerIpc(): AgentManager {
   ipcMain.handle('projects:remove', async (_e, id: string) => {
     await projects.remove(id)
     await skills.removeProject(id)
+    await engine.removeProject(id)
   })
   ipcMain.handle('projects:rename', (_e, id: string, name: string) =>
     projects.renameProject(id, name)
@@ -109,6 +120,31 @@ export function registerIpc(): AgentManager {
     skills.removeFromProject(projectId, skillId)
   )
 
+  ipcMain.handle('system:showInFolder', (_e, path: string) => {
+    if (typeof path === 'string' && path) shell.showItemInFolder(path)
+  })
+
+  ipcMain.handle('connectors:list', () => connectors.list())
+  ipcMain.handle('connectors:save', (_e, input: ConnectorInput) => connectors.upsert(input))
+  ipcMain.handle('connectors:remove', (_e, id: string) => connectors.remove(id))
+  ipcMain.handle('connectors:test', (_e, id: string) => connectors.test(id))
+
+  ipcMain.handle('automations:list', (_e, projectId: string) => engine.list(projectId))
+  ipcMain.handle('automations:unseen', (_e, projectId: string) => engine.unseen(projectId))
+  ipcMain.handle('automations:create', (_e, projectId: string, name?: string) =>
+    engine.create(projectId, name)
+  )
+  ipcMain.handle('automations:save', (_e, automation: Automation) => engine.save(automation))
+  ipcMain.handle('automations:remove', (_e, id: string) => engine.remove(id))
+  ipcMain.handle('automations:run', (_e, id: string) => engine.runNow(id))
+  ipcMain.handle('automations:runs', (_e, id: string) => engine.runs(id))
+  ipcMain.handle('automations:getRun', (_e, id: string, runId: string) => engine.getRun(id, runId))
+  ipcMain.handle('automations:markSeen', (_e, id: string, runId: string) => engine.markSeen(id, runId))
+  ipcMain.handle('automations:cancel', (_e, id: string, runId: string) => engine.cancel(id, runId))
+  ipcMain.handle('automations:decide', (_e, id: string, runId: string, approve: boolean) =>
+    engine.decide(id, runId, approve === true)
+  )
+
   ipcMain.handle('conversations:list', (_e, projectId: string) => agents.list(projectId))
   ipcMain.handle('conversations:items', (_e, projectId: string, id: string) =>
     agents.items(projectId, id)
@@ -154,5 +190,5 @@ export function registerIpc(): AgentManager {
   ipcMain.handle('agents:interrupt', (_e, sessionId: string) => agents.interrupt(sessionId))
   ipcMain.handle('agents:stop', (_e, sessionId: string) => agents.stop(sessionId))
 
-  return agents
+  return { agents, engine }
 }

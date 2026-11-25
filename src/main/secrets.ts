@@ -1,4 +1,4 @@
-// Segredos do app (hoje, só a chave de API do Gemini).
+// Segredos do app: a chave de API do Gemini e as senhas dos conectores.
 // Ficam criptografados com o cofre do sistema (no Windows, DPAPI, ligado à sua conta
 // de usuário) em <dados do app>/secrets.json. Nunca são enviados para a interface:
 // ela só consegue saber se a chave existe, gravar uma nova ou apagar.
@@ -6,9 +6,9 @@ import { app, safeStorage } from 'electron'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export type SecretName = 'gemini-api-key'
+export type SecretName = 'gemini-api-key' | `connector:${string}`
 
-type Stored = Partial<Record<SecretName, string>>
+type Stored = Partial<Record<string, string>>
 
 function file(): string {
   return join(app.getPath('userData'), 'secrets.json')

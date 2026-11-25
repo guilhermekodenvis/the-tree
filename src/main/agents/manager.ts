@@ -23,7 +23,7 @@ import * as projects from '../projects/store'
 import { withSkills } from '../skills/prompt'
 import * as skillStore from '../skills/store'
 
-const adapters: Record<AgentId, AgentAdapter> = {
+export const adapters: Record<AgentId, AgentAdapter> = {
   claude: claudeAdapter,
   codex: codexAdapter,
   gemini: geminiAdapter

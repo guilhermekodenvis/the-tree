@@ -53,6 +53,31 @@ const api: TreeApi = {
     removeFromProject: (projectId, skillId) =>
       ipcRenderer.invoke('skills:removeFromProject', projectId, skillId)
   },
+  system: {
+    showInFolder: (path) => ipcRenderer.invoke('system:showInFolder', path)
+  },
+  connectors: {
+    list: () => ipcRenderer.invoke('connectors:list'),
+    save: (input) => ipcRenderer.invoke('connectors:save', input),
+    remove: (id) => ipcRenderer.invoke('connectors:remove', id),
+    test: (id) => ipcRenderer.invoke('connectors:test', id)
+  },
+  automations: {
+    list: (projectId) => ipcRenderer.invoke('automations:list', projectId),
+    unseen: (projectId) => ipcRenderer.invoke('automations:unseen', projectId),
+    create: (projectId, name) => ipcRenderer.invoke('automations:create', projectId, name),
+    save: (automation) => ipcRenderer.invoke('automations:save', automation),
+    remove: (id) => ipcRenderer.invoke('automations:remove', id),
+    run: (id) => ipcRenderer.invoke('automations:run', id),
+    runs: (id) => ipcRenderer.invoke('automations:runs', id),
+    getRun: (id, runId) => ipcRenderer.invoke('automations:getRun', id, runId),
+    markSeen: (id, runId) => ipcRenderer.invoke('automations:markSeen', id, runId),
+    cancel: (id, runId) => ipcRenderer.invoke('automations:cancel', id, runId),
+    decide: (id, runId, approve) => ipcRenderer.invoke('automations:decide', id, runId, approve),
+    onChanged: (listener) => listen<string>('automations:changed', listener),
+    onOpen: (listener) =>
+      listen<{ projectId: string; automationId: string; runId: string }>('automations:open', listener)
+  },
   conversations: {
     list: (projectId) => ipcRenderer.invoke('conversations:list', projectId),
     items: (projectId, id) => ipcRenderer.invoke('conversations:items', projectId, id),
