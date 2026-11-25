@@ -14,9 +14,10 @@ import { createTray, ensureStartWithWindows, HIDDEN_ARG } from './tray'
 let mainWindow: BrowserWindow | null = null
 let quitting = false
 
-/** Estado do app entre aberturas (primeira execução, aviso da bandeja já mostrado). */
+/** Estado do app entre aberturas. */
 interface AppState {
-  launched?: boolean
+  /** O app instalado já ligou o "iniciar com o Windows" uma vez (o modo dev não conta). */
+  startupConfigured?: boolean
   trayHintShown?: boolean
 }
 const stateFile = (): string => join(app.getPath('userData'), 'app-state.json')
@@ -149,9 +150,12 @@ async function start(): Promise<void> {
     }
   })
 
+  // Primeira abertura do app instalado: liga o "iniciar com o Windows" (dá para
+  // desligar depois no menu do ícone, e a escolha é respeitada).
   const state = await readState()
-  ensureStartWithWindows(!state.launched)
-  if (!state.launched) await writeState({ ...state, launched: true })
+  if (ensureStartWithWindows(!state.startupConfigured)) {
+    await writeState({ ...state, startupConfigured: true })
+  }
 
   // Aberto pelo Windows ao ligar: começa escondido, só na bandeja.
   mainWindow = createWindow(!process.argv.includes(HIDDEN_ARG))

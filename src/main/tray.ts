@@ -21,9 +21,12 @@ function setStartsWithWindows(on: boolean): void {
 /**
  * Na primeira vez que o app instalado roda, liga o "iniciar com o Windows":
  * as automações dependem do app aberto. Dá para desligar no menu do ícone.
+ * Devolve true quando ligou (para gravar que já foi feito).
  */
-export function ensureStartWithWindows(firstRun: boolean): void {
-  if (app.isPackaged && firstRun) setStartsWithWindows(true)
+export function ensureStartWithWindows(firstRun: boolean): boolean {
+  if (!app.isPackaged || !firstRun) return false
+  setStartsWithWindows(true)
+  return true
 }
 
 export function createTray(handlers: { show(): void; quit(): void }): Tray {

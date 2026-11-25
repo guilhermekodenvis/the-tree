@@ -73,6 +73,7 @@
       "shortcutName": "The Tree",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false
-    }
+    },
+    "npmRebuild": false
   }
 }
