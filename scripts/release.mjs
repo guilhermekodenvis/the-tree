@@ -1,0 +1,79 @@
+// Versão e publicação do The Tree.
+//
+//   node scripts/release.mjs version   -> põe no package.json a próxima versão
+//                                         (última Release + 1); usado pela Action.
+//   node scripts/release.mjs publish   -> faz tudo daqui do PC: próxima versão, build,
+//                                         instalador e Release no GitHub; no fim volta
+//                                         o package.json como estava. Usa o login do
+//                                         GitHub CLI (gh) se GH_TOKEN não estiver definido.
+//
+// A versão é sempre a da última Release publicada + 1 (0.1.N), venha ela da Action
+// ou daqui. Assim o app instalado sempre enxerga a mais nova como maior.
+import { execFileSync, spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+
+const REPO = 'guilhermekodenvis/the-tree'
+const FIRST = '0.1.1'
+const shell = process.platform === 'win32'
+
+function latestTag(env) {
+  try {
+    return execFileSync('gh', ['release', 'view', '-R', REPO, '--json', 'tagName', '-q', '.tagName'], {
+      encoding: 'utf8',
+      env,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      shell
+    }).trim()
+  } catch {
+    return '' // Nenhuma Release ainda.
+  }
+}
+
+function nextVersion(env) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(latestTag(env))
+  if (!match) return FIRST
+  return `${match[1]}.${match[2]}.${Number(match[3]) + 1}`
+}
+
+function run(command, args, env) {
+  const result = spawnSync(command, args, { stdio: 'inherit', env, shell })
+  if (result.status !== 0) throw new Error(`Falhou: ${command} ${args.join(' ')}`)
+}
+
+function setVersion(env) {
+  const version = nextVersion(env)
+  run('npm', ['version', version, '--no-git-tag-version', '--allow-same-version'], env)
+  console.log(`Versão desta build: ${version}`)
+  return version
+}
+
+const mode = process.argv[2]
+const env = { ...process.env }
+
+if (mode === 'version') {
+  setVersion(env)
+} else if (mode === 'publish') {
+  if (!env.GH_TOKEN) {
+    // O token não é mostrado: vai direto para o ambiente do electron-builder.
+    env.GH_TOKEN = execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', shell }).trim()
+  }
+  const before = {
+    pkg: readFileSync('package.json', 'utf8'),
+    lock: readFileSync('package-lock.json', 'utf8')
+  }
+  try {
+    const version = setVersion(env)
+    run('npm', ['run', 'typecheck'], env)
+    run('npx', ['electron-vite', 'build'], env)
+    run('npx', ['electron-builder', '--win', '--x64', '--publish', 'always'], env)
+    console.log(`Publicada a versão ${version}: https://github.com/${REPO}/releases`)
+  } finally {
+    // A versão publicada não fica no código; a próxima é calculada pela Release.
+    const { writeFileSync } = await import('node:fs')
+    writeFileSync('package.json', before.pkg)
+    writeFileSync('package-lock.json', before.lock)
+  }
+} else {
+  console.error('Use: node scripts/release.mjs version | publish')
+  process.exit(1)
+}

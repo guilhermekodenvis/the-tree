@@ -1,6 +1,7 @@
 # Gera o instalador do The Tree a cada push na main e publica numa Release do
 # GitHub. O app instalado confere essas Releases (electron-updater) e se atualiza.
-# A versão de cada build é 0.1.<número da execução>, sempre maior que a anterior.
+# A versão de cada build é a da última Release + 1 (scripts/release.mjs), igual à
+# publicação feita do PC com `npm run release`.
 name: Release
 
 on:
@@ -31,8 +32,9 @@ jobs:
         run: npm ci
 
       - name: Definir a versão desta build
-        shell: bash
-        run: npm version "0.1.${{ github.run_number }}" --no-git-tag-version
+        run: node scripts/release.mjs version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Conferir tipos
         run: npm run typecheck
