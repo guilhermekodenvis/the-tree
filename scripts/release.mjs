@@ -36,8 +36,10 @@ function nextVersion(env) {
   return `${match[1]}.${match[2]}.${Number(match[3]) + 1}`
 }
 
+// npm e npx são .cmd no Windows e precisam do shell; o gh é um .exe e roda sem ele,
+// senão argumentos com espaço ("The Tree 0.1.2") seriam quebrados em pedaços.
 function run(command, args, env) {
-  const result = spawnSync(command, args, { stdio: 'inherit', env, shell })
+  const result = spawnSync(command, args, { stdio: 'inherit', env, shell: command !== 'gh' && shell })
   if (result.status !== 0) throw new Error(`Falhou: ${command} ${args.join(' ')}`)
 }
 
