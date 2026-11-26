@@ -1,7 +1,8 @@
 // Versão e publicação do The Tree.
 //
 //   node scripts/release.mjs version   -> põe no package.json a próxima versão
-//                                         (última Release + 1); usado pela Action.
+//                                         (última Release + 1) e cria a Release dela;
+//                                         usado pela Action.
 //   node scripts/release.mjs publish   -> faz tudo daqui do PC: próxima versão, build,
 //                                         instalador e Release no GitHub; no fim volta
 //                                         o package.json como estava. Usa o login do
@@ -47,11 +48,24 @@ function setVersion(env) {
   return version
 }
 
+/**
+ * Cria a Release (e a tag, a partir da main) antes de enviar os arquivos. Sem isso,
+ * o electron-builder envia os arquivos em paralelo, cada envio tenta criar a Release
+ * e o segundo falha ("Published releases must have a valid tag").
+ */
+function createRelease(version, env) {
+  run(
+    'gh',
+    ['release', 'create', `v${version}`, '-R', REPO, '--target', 'main', '--title', version, '--notes', `The Tree ${version}`],
+    env
+  )
+}
+
 const mode = process.argv[2]
 const env = { ...process.env }
 
 if (mode === 'version') {
-  setVersion(env)
+  createRelease(setVersion(env), env)
 } else if (mode === 'publish') {
   if (!env.GH_TOKEN) {
     // O token não é mostrado: vai direto para o ambiente do electron-builder.
@@ -64,6 +78,7 @@ if (mode === 'version') {
   try {
     const version = setVersion(env)
     run('npm', ['run', 'typecheck'], env)
+    createRelease(version, env)
     run('npx', ['electron-vite', 'build'], env)
     run('npx', ['electron-builder', '--win', '--x64', '--publish', 'always'], env)
     console.log(`Publicada a versão ${version}: https://github.com/${REPO}/releases`)
