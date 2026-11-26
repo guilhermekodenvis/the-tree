@@ -31,13 +31,13 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Definir a versão desta build
+      - name: Conferir tipos
+        run: npm run typecheck
+
+      - name: Definir a versão e criar a Release
         run: node scripts/release.mjs version
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Conferir tipos
-        run: npm run typecheck
 
       - name: Compilar
         run: npx electron-vite build
