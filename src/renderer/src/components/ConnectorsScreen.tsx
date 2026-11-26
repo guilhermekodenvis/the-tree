@@ -1,515 +1,294 @@
-// Tela "Conectores" do menu lateral: as ligações do The Tree com serviços de fora.
+// Tela "Conectores" do menu lateral: serviços de fora que o The Tree e os agentes
+// usam. (As contas do Claude e do ChatGPT ficam em "Modelos de IA".)
 //
-// - Claude e ChatGPT: o login do Claude Code e do Codex neste computador (o mesmo dos
-//   CLIs). Conectar abre o login oficial no navegador; remover sai da conta, também
-//   fora do app.
-// - Gemini: chave de API guardada criptografada.
-// - Gmail (e outros SMTP antigos): envio de e-mails nas automações; pode haver vários.
+// - Gmail (e outros SMTP antigos): envio de e-mails nos passos das automações;
+//   pode haver vários.
+// - Google Maps: pesquisa de lugares (Places API) para os agentes; chave de API.
+// - Navegador: navegador invisível do The Tree para os agentes abrirem sites.
 //
-// A tela mostra os conectores adicionados em cartões. "Adicionar conector" abre uma
-// janela com as abas "Conectores adicionados" e "Novos conectores".
+// Google Maps e Navegador viram ferramentas dos agentes (Claude e ChatGPT) em
+// qualquer conversa, chat rápido ou automação que começar depois de ligar.
 import { useCallback, useEffect, useState } from 'react'
 import { GMAIL_PRESET, type Connector, type ConnectorInput } from '../../../shared/automation'
-import type { AccountId, AccountStatus } from '../../../shared/types'
+import type { ToolConnectorId, ToolConnectorStatus } from '../../../shared/types'
 import { messageOf } from '../lib/errors'
-import { GeminiKeyForm } from './GeminiKey'
-import { Button, IconButton } from './ui/Button'
-import { Icon } from './ui/Icon'
-import { Logo, type LogoName } from './ui/Logo'
-import { Tabs } from './ui/Tabs'
+import { ConnectionsPage, type AddedItem, type NewItem } from './connections/ConnectionsPage'
+import { Button } from './ui/Button'
 
-interface CatalogItem {
-  id: AccountId | 'gmail'
-  name: string
-  description: string
-}
-
-/** Conectores disponíveis no app (por enquanto, só estes). */
-const CATALOG: CatalogItem[] = [
-  {
-    id: 'claude',
-    name: 'Claude',
-    description: 'Conta do Claude Code, usada nas conversas com o Claude.'
+const TOOLS: Record<ToolConnectorId, { name: string; description: string }> = {
+  maps: {
+    name: 'Google Maps',
+    description:
+      'Os agentes pesquisam negócios no Google Maps: nota, avaliações, telefone e site. Usa uma chave de API sua.'
   },
-  {
-    id: 'codex',
-    name: 'ChatGPT',
-    description: 'Conta do Codex, usada nas conversas com o ChatGPT.'
-  },
-  {
-    id: 'gemini',
-    name: 'Gemini',
-    description: 'Chave de API do Google AI Studio, usada pelo Gemini.'
-  },
-  {
-    id: 'gmail',
-    name: 'Gmail',
-    description: 'Envia e-mails nos passos das automações. Pode conectar mais de uma conta.'
+  browser: {
+    name: 'Navegador',
+    description:
+      'Os agentes abrem sites num navegador invisível do The Tree, sem as suas contas: leem o conteúdo, procuram chats e tiram prints.'
   }
-]
-
-const ACCOUNT_NAMES: Record<AccountId, string> = {
-  claude: 'Claude',
-  codex: 'ChatGPT',
-  gemini: 'Gemini'
-}
-
-/** Um conector adicionado: conta de agente ou conector de e-mail. */
-type Added =
-  | { kind: 'account'; key: string; id: AccountId; name: string; detail: string }
-  | { kind: 'smtp'; key: string; connector: Connector; name: string; detail: string }
-
-/** O que a janela está mostrando além das abas. */
-type View =
-  | { screen: 'list' }
-  | { screen: 'gmail'; editing: Connector | null }
-  | { screen: 'gemini' }
-  | { screen: 'login'; id: 'claude' | 'codex' }
-
-function logoOf(item: Added | CatalogItem): LogoName {
-  if ('kind' in item) {
-    if (item.kind === 'account') return item.id
-    return item.connector.host === GMAIL_PRESET.host ? 'gmail' : 'smtp'
-  }
-  return item.id
-}
-
-/** Texto do aviso antes de remover. */
-function removeWarning(item: Added): string {
-  if (item.kind === 'smtp') return 'Os passos de e-mail que usam este conector vão falhar.'
-  if (item.id === 'gemini') return 'A chave do Gemini será apagada deste computador.'
-  return `Isso sai da conta do ${item.name} neste computador inteiro, também fora do The Tree.`
 }
 
 export function ConnectorsScreen() {
-  const [accounts, setAccounts] = useState<AccountStatus[] | null>(null)
   const [smtp, setSmtp] = useState<Connector[] | null>(null)
+  const [tools, setTools] = useState<ToolConnectorStatus[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [modal, setModal] = useState<{ tab: 'added' | 'new'; view: View } | null>(null)
-  const [confirming, setConfirming] = useState<string | null>(null)
-  const [busy, setBusy] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
-    const [a, s] = await Promise.all([window.api.accounts.status(), window.api.connectors.list()])
-    setAccounts(a)
+    const [s, t] = await Promise.all([window.api.connectors.list(), window.api.connectors.tools()])
     setSmtp(s)
+    setTools(t)
   }, [])
 
   useEffect(() => {
     refresh().catch((err) => setError(messageOf(err)))
   }, [refresh])
 
-  const added: Added[] = [
-    ...(accounts ?? [])
-      .filter((a) => a.connected)
-      .map((a): Added => ({
-        kind: 'account',
-        key: a.id,
-        id: a.id,
-        name: ACCOUNT_NAMES[a.id],
-        detail: a.detail ?? 'Conectado'
-      })),
-    ...(smtp ?? []).map((c): Added => ({
-      kind: 'smtp',
+  const added: AddedItem[] = [
+    ...(smtp ?? []).map((c): AddedItem => ({
       key: c.id,
-      connector: c,
+      logo: c.host === GMAIL_PRESET.host ? 'gmail' : 'smtp',
       name: c.name,
-      detail: c.hasPassword ? c.user : `${c.user} · sem senha salva`
-    }))
+      detail: c.hasPassword ? c.user : `${c.user} · sem senha salva`,
+      view: `smtp:${c.id}`,
+      removeWarning: 'Os passos de e-mail que usam este conector vão falhar.',
+      remove: () => window.api.connectors.remove(c.id),
+      actions: [
+        {
+          icon: 'send',
+          label: 'Enviar e-mail de teste',
+          disabled: !c.hasPassword,
+          run: async () => {
+            const to = await window.api.connectors.test(c.id)
+            return `E-mail de teste enviado para ${to}. Confira a caixa de entrada.`
+          }
+        }
+      ]
+    })),
+    ...(tools ?? [])
+      .filter((t) => t.connected)
+      .map((t): AddedItem => ({
+        key: t.id,
+        logo: t.id,
+        name: TOOLS[t.id].name,
+        detail: t.detail ?? 'Conectado',
+        view: t.id,
+        removeWarning:
+          t.id === 'maps'
+            ? 'A chave será apagada deste computador e os agentes deixam de pesquisar no Google Maps.'
+            : 'Os agentes deixam de abrir sites pelo navegador do The Tree.',
+        remove: async () => {
+          await window.api.connectors.disconnectTool(t.id)
+        },
+        actions: [
+          { icon: 'play', label: 'Testar', run: () => window.api.connectors.testTool(t.id) }
+        ]
+      }))
   ]
-  const connected = (id: AccountId): boolean =>
-    accounts?.find((a) => a.id === id)?.connected === true
-  const available = CATALOG.filter(
-    (item) => item.id === 'gmail' || !connected(item.id as AccountId)
-  )
 
-  const run = async (key: string, action: () => Promise<void>): Promise<void> => {
-    setError(null)
-    setNotice(null)
-    setBusy(key)
-    try {
-      await action()
-      await refresh()
-    } catch (err) {
-      setError(messageOf(err))
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  /** Abrir a edição (cartão ou aba "adicionados"). */
-  const edit = (item: Added): void => {
-    setConfirming(null)
-    const view: View =
-      item.kind === 'smtp'
-        ? { screen: 'gmail', editing: item.connector }
-        : item.id === 'gemini'
-          ? { screen: 'gemini' }
-          : { screen: 'login', id: item.id }
-    setModal({ tab: 'added', view })
-  }
-
-  const connect = (item: CatalogItem): void => {
-    const view: View =
-      item.id === 'gmail'
-        ? { screen: 'gmail', editing: null }
-        : item.id === 'gemini'
-          ? { screen: 'gemini' }
-          : { screen: 'login', id: item.id }
-    setModal({ tab: 'new', view })
-  }
-
-  const remove = (item: Added): Promise<void> =>
-    run(`remove:${item.key}`, async () => {
-      setConfirming(null)
-      if (item.kind === 'smtp') await window.api.connectors.remove(item.connector.id)
-      else await window.api.accounts.logout(item.id)
-    })
-
-  const test = (connector: Connector): Promise<void> =>
-    run(`test:${connector.id}`, async () => {
-      const to = await window.api.connectors.test(connector.id)
-      setNotice(`E-mail de teste enviado para ${to}. Confira a caixa de entrada.`)
-    })
+  const available: NewItem[] = [
+    {
+      key: 'gmail',
+      logo: 'gmail',
+      name: 'Gmail',
+      description: 'Envia e-mails nos passos das automações. Pode conectar mais de uma conta.',
+      view: 'smtp:new'
+    },
+    ...(tools ?? [])
+      .filter((t) => !t.connected)
+      .map((t): NewItem => ({ key: t.id, logo: t.id, ...TOOLS[t.id], view: t.id }))
+  ]
 
   return (
-    <main className="screen">
-      <header className="screen__header">
-        <div>
-          <h1 className="text-title">Conectores</h1>
-          <p className="text-caption">
-            Contas e serviços que o The Tree usa: os agentes e o envio de e-mails das automações.
-          </p>
-        </div>
-        <Button
-          variant="accent"
-          icon="add"
-          onClick={() => setModal({ tab: 'new', view: { screen: 'list' } })}
-        >
-          Adicionar conector
-        </Button>
-      </header>
-
-      {error && (
-        <p className="notice" role="alert">
-          {error}
-        </p>
-      )}
-      {notice && <p className="success-note">{notice}</p>}
-
-      {accounts === null || smtp === null ? (
-        <p className="text-caption">Conferindo os conectores…</p>
-      ) : added.length === 0 ? (
-        <div className="empty-state">
-          <Icon name="plug" className="empty-state__icon" />
-          <p className="empty-state__title">Nenhum conector ainda</p>
-          <p>Conecte o Claude, o ChatGPT, o Gemini ou o Gmail.</p>
-        </div>
-      ) : (
-        <ul className="connector-grid">
-          {added.map((item) => (
-            <li key={item.key} className="connector-card">
-              <Logo name={logoOf(item)} size={36} />
-              <div className="card__body">
-                <div className="connector-card__name truncate">{item.name}</div>
-                <div className="text-caption truncate" title={item.detail}>
-                  {item.detail}
-                </div>
-              </div>
-              {confirming === item.key ? (
-                <div className="connector-card__confirm">
-                  <span className="text-caption">{removeWarning(item)}</span>
-                  <div className="key-form__actions">
-                    <Button
-                      variant="accent"
-                      disabled={busy !== null}
-                      onClick={() => void remove(item)}
-                    >
-                      Excluir
-                    </Button>
-                    <Button onClick={() => setConfirming(null)}>Cancelar</Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="connector-card__tools">
-                  {item.kind === 'smtp' && (
-                    <IconButton
-                      icon="send"
-                      label="Enviar e-mail de teste"
-                      disabled={busy !== null || !item.connector.hasPassword}
-                      onClick={() => void test(item.connector)}
-                    />
-                  )}
-                  <IconButton icon="rename" label="Editar conector" onClick={() => edit(item)} />
-                  <IconButton
-                    icon="delete"
-                    label="Excluir conector"
-                    danger
-                    onClick={() => setConfirming(item.key)}
-                  />
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {modal && (
-        <ConnectorsModal
-          tab={modal.tab}
-          view={modal.view}
-          added={added}
-          available={available}
-          busy={busy}
-          confirming={confirming}
-          onTab={(tab) => setModal({ tab, view: { screen: 'list' } })}
-          onView={(view) => setModal({ ...modal, view })}
-          onEdit={edit}
-          onConnect={connect}
-          onAskRemove={(item) => setConfirming(item.key)}
-          onCancelRemove={() => setConfirming(null)}
-          onRemove={(item) => void remove(item)}
-          onSaved={() => {
-            setModal({ tab: 'added', view: { screen: 'list' } })
-            void refresh()
-          }}
-          onClose={() => {
-            setModal(null)
-            setConfirming(null)
-            void refresh()
-          }}
-        />
-      )}
-    </main>
-  )
-}
-
-function ConnectorsModal(props: {
-  tab: 'added' | 'new'
-  view: View
-  added: Added[]
-  available: CatalogItem[]
-  busy: string | null
-  confirming: string | null
-  onTab(tab: 'added' | 'new'): void
-  onView(view: View): void
-  onEdit(item: Added): void
-  onConnect(item: CatalogItem): void
-  onAskRemove(item: Added): void
-  onCancelRemove(): void
-  onRemove(item: Added): void
-  onSaved(): void
-  onClose(): void
-}) {
-  const { tab, view, added, available } = props
-
-  // Esc fecha a janela.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') props.onClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [props.onClose])
-
-  const back = (): void => props.onView({ screen: 'list' })
-
-  return (
-    <div
-      className="modal-backdrop"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) props.onClose()
-      }}
-    >
-      <div className="modal" role="dialog" aria-modal="true" aria-label="Conectores">
-        <header className="modal__header">
-          {view.screen !== 'list' && (
-            <IconButton icon="back" label="Voltar para a lista" onClick={back} />
-          )}
-          <h2 className="modal__title">
-            {view.screen === 'list'
-              ? 'Conectores'
-              : view.screen === 'gmail'
-                ? view.editing
-                  ? `Editar ${view.editing.name}`
-                  : 'Conectar Gmail'
-                : view.screen === 'gemini'
-                  ? 'Chave do Gemini'
-                  : `Conectar ${ACCOUNT_NAMES[view.id]}`}
-          </h2>
-          <IconButton icon="dismiss" label="Fechar" onClick={props.onClose} />
-        </header>
-
-        {view.screen === 'list' && (
-          <>
-            <div className="modal__tabs">
-              <Tabs
-                label="Conectores"
-                active={tab}
-                onChange={props.onTab}
-                tabs={[
-                  { id: 'added', label: `Conectores adicionados (${added.length})` },
-                  { id: 'new', label: 'Novos conectores' }
-                ]}
+    <ConnectionsPage
+      title="Conectores"
+      caption="Serviços que o The Tree e os agentes usam: e-mail, Google Maps e navegador."
+      addLabel="Adicionar conector"
+      addedTab="Conectores adicionados"
+      newTab="Novos conectores"
+      emptyIcon="plug"
+      emptyTitle="Nenhum conector ainda"
+      emptyText="Conecte o Gmail, o Google Maps ou o Navegador."
+      nothingNew="Todos os conectores já estão ligados."
+      loading={(smtp === null || tools === null) && !error}
+      loadError={error}
+      added={added}
+      available={available}
+      refresh={refresh}
+      renderView={(view, context) => {
+        if (view === 'maps') {
+          return {
+            title: context.editing ? 'Google Maps' : 'Conectar Google Maps',
+            body: (
+              <MapsForm editing={context.editing} onDone={context.done} onCancel={context.cancel} />
+            )
+          }
+        }
+        if (view === 'browser') {
+          return {
+            title: context.editing ? 'Navegador' : 'Conectar Navegador',
+            body: (
+              <BrowserForm
+                editing={context.editing}
+                onDone={context.done}
+                onCancel={context.cancel}
               />
-            </div>
-            <ul className="modal__body connector-list">
-              {tab === 'added' && added.length === 0 && (
-                <p className="text-caption">Nenhum conector adicionado ainda.</p>
-              )}
-              {tab === 'added' &&
-                added.map((item) => (
-                  <li key={item.key} className="connector-row">
-                    <Logo name={logoOf(item)} />
-                    <div className="card__body">
-                      <div className="connector-card__name">{item.name}</div>
-                      <div className="text-caption truncate">{item.detail}</div>
-                      {props.confirming === item.key && (
-                        <div className="connector-row__confirm">
-                          <span className="text-caption">{removeWarning(item)}</span>
-                          <div className="key-form__actions">
-                            <Button
-                              variant="accent"
-                              disabled={props.busy !== null}
-                              onClick={() => props.onRemove(item)}
-                            >
-                              Remover conexão
-                            </Button>
-                            <Button onClick={props.onCancelRemove}>Cancelar</Button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <span className="connector-status connector-status--on">Conectado</span>
-                    {props.confirming !== item.key && (
-                      <div className="connector-row__actions">
-                        <Button onClick={() => props.onEdit(item)}>Editar conexão</Button>
-                        <Button onClick={() => props.onAskRemove(item)}>Remover conexão</Button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              {tab === 'new' &&
-                available.map((item) => (
-                  <li key={item.id} className="connector-row">
-                    <Logo name={logoOf(item)} />
-                    <div className="card__body">
-                      <div className="connector-card__name">{item.name}</div>
-                      <div className="text-caption">{item.description}</div>
-                    </div>
-                    <span className="connector-status">Não conectado</span>
-                    <div className="connector-row__actions">
-                      <Button variant="accent" onClick={() => props.onConnect(item)}>
-                        Conectar
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              {tab === 'new' && available.length === 1 && (
-                <p className="text-caption">Claude, ChatGPT e Gemini já estão conectados.</p>
-              )}
-            </ul>
-          </>
-        )}
-
-        {view.screen === 'gmail' && (
-          <div className="modal__body">
-            <SmtpForm editing={view.editing} onSaved={props.onSaved} onCancel={back} />
-          </div>
-        )}
-
-        {view.screen === 'gemini' && (
-          <div className="modal__body">
-            <GeminiKeyForm
-              configured={added.some((a) => a.kind === 'account' && a.id === 'gemini')}
-              onDone={props.onSaved}
-            />
-          </div>
-        )}
-
-        {view.screen === 'login' && (
-          <div className="modal__body">
-            <AccountLogin id={view.id} onDone={props.onSaved} onCancel={back} />
-          </div>
-        )}
-      </div>
-    </div>
+            )
+          }
+        }
+        const editing = (smtp ?? []).find((c) => `smtp:${c.id}` === view) ?? null
+        return {
+          title: editing ? `Editar ${editing.name}` : 'Conectar Gmail',
+          body: (
+            <SmtpForm editing={editing} onSaved={() => context.done()} onCancel={context.cancel} />
+          )
+        }
+      }}
+    />
   )
 }
 
-/** Login oficial do Claude ou do ChatGPT, feito no navegador. */
-function AccountLogin({
-  id,
+/** Chave da Places API. Ao salvar, faz uma pesquisa de teste. */
+function MapsForm({
+  editing,
   onDone,
   onCancel
 }: {
-  id: 'claude' | 'codex'
-  onDone(): void
+  editing: boolean
+  onDone(message?: string): void
   onCancel(): void
 }) {
-  const [state, setState] = useState<'idle' | 'waiting' | 'error'>('idle')
-  const [link, setLink] = useState<string | null>(null)
+  const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const name = ACCOUNT_NAMES[id]
+  const [saving, setSaving] = useState(false)
 
-  useEffect(
-    () =>
-      window.api.accounts.onLoginLink((event) => {
-        if (event.id === id) setLink(event.url)
-      }),
-    [id]
-  )
-
-  const start = async (): Promise<void> => {
-    setState('waiting')
+  const save = async (): Promise<void> => {
+    setSaving(true)
     setError(null)
-    setLink(null)
     try {
-      const status = await window.api.accounts.login(id)
-      if (!status.connected) throw new Error('O login não foi concluído. Tente de novo.')
-      onDone()
+      await window.api.connectors.connectTool('maps', key)
+      setKey('')
+      onDone(await window.api.connectors.testTool('maps'))
     } catch (err) {
-      setState('error')
       setError(messageOf(err))
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <div className="key-form">
-      <p>
-        O The Tree usa a conta do {id === 'claude' ? 'Claude Code' : 'Codex'} deste computador. Ao
-        continuar, o login oficial do {name} abre no navegador; depois de entrar, volte aqui.
-      </p>
+    <form
+      className="key-form"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void save()
+      }}
+    >
+      <p className="text-caption">Para criar a chave, no Google Cloud:</p>
+      <ol className="text-caption steps-list">
+        <li>
+          Abra{' '}
+          <a
+            className="link"
+            href="https://console.cloud.google.com/apis/library/places.googleapis.com"
+            target="_blank"
+            rel="noreferrer"
+          >
+            a página da Places API (New)
+          </a>
+          , escolha ou crie um projeto e clique em <strong>Ativar</strong>.
+        </li>
+        <li>Ative o faturamento do projeto (o Google dá um crédito mensal gratuito).</li>
+        <li>
+          Em{' '}
+          <a
+            className="link"
+            href="https://console.cloud.google.com/apis/credentials"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Credenciais
+          </a>
+          , clique em <strong>Criar credenciais → Chave de API</strong> e copie a chave.
+        </li>
+      </ol>
+      <label className="key-form__label" htmlFor="maps-key">
+        Chave de API do Google Maps
+      </label>
+      <input
+        id="maps-key"
+        className="field"
+        type="password"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={editing ? 'Deixe em branco para manter a chave salva' : 'Cole aqui a chave'}
+        value={key}
+        onChange={(event) => setKey(event.target.value)}
+      />
       <p className="text-caption">
-        A conta vale para o computador inteiro: o {id === 'claude' ? 'Claude Code' : 'Codex'} fora
-        do The Tree passa a usar a mesma.
+        A chave fica criptografada neste computador. Cada pesquisa dos agentes é cobrada pelo Google
+        na sua conta.
       </p>
-      {state === 'waiting' && (
-        <p className="text-caption">
-          Aguardando você terminar o login no navegador…
-          {link && (
-            <>
-              {' '}
-              Se ele não abriu,{' '}
-              <a className="link" href={link} target="_blank" rel="noreferrer">
-                abra o login por aqui
-              </a>
-              .
-            </>
-          )}
-        </p>
-      )}
       {error && (
         <p className="notice" role="alert">
           {error}
         </p>
       )}
       <div className="key-form__actions">
-        <Button variant="accent" disabled={state === 'waiting'} onClick={() => void start()}>
-          {state === 'waiting' ? 'Entrando…' : `Entrar no ${name}`}
+        <Button variant="accent" type="submit" disabled={saving || (!editing && !key.trim())}>
+          {saving ? 'Testando…' : editing ? 'Salvar e testar' : 'Conectar e testar'}
         </Button>
         <Button onClick={onCancel}>Cancelar</Button>
+      </div>
+    </form>
+  )
+}
+
+/** O Navegador não tem configuração: liga e faz um teste abrindo uma página. */
+function BrowserForm({
+  editing,
+  onDone,
+  onCancel
+}: {
+  editing: boolean
+  onDone(message?: string): void
+  onCancel(): void
+}) {
+  const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  const connect = async (): Promise<void> => {
+    setSaving(true)
+    setError(null)
+    try {
+      await window.api.connectors.connectTool('browser')
+      onDone(await window.api.connectors.testTool('browser'))
+    } catch (err) {
+      setError(messageOf(err))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="key-form">
+      <p>
+        Os agentes ganham um navegador próprio do The Tree, invisível, para abrir sites: ler o
+        conteúdo, ver se o site está no ar, procurar chats de atendimento e tirar prints.
+      </p>
+      <p className="text-caption">
+        Ele não usa o seu Chrome nem as suas contas: não tem cookies, logins nem downloads, e é
+        apagado a cada site aberto.
+      </p>
+      {error && (
+        <p className="notice" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="key-form__actions">
+        <Button variant="accent" disabled={saving} onClick={() => void connect()}>
+          {saving ? 'Testando…' : editing ? 'Testar de novo' : 'Conectar e testar'}
+        </Button>
+        <Button onClick={onCancel}>{editing ? 'Fechar' : 'Cancelar'}</Button>
       </div>
     </div>
   )

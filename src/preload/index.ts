@@ -78,7 +78,11 @@ const api: TreeApi = {
     list: () => ipcRenderer.invoke('connectors:list'),
     save: (input) => ipcRenderer.invoke('connectors:save', input),
     remove: (id) => ipcRenderer.invoke('connectors:remove', id),
-    test: (id) => ipcRenderer.invoke('connectors:test', id)
+    test: (id) => ipcRenderer.invoke('connectors:test', id),
+    tools: () => ipcRenderer.invoke('connectors:tools'),
+    connectTool: (id, key) => ipcRenderer.invoke('connectors:connectTool', id, key),
+    disconnectTool: (id) => ipcRenderer.invoke('connectors:disconnectTool', id),
+    testTool: (id) => ipcRenderer.invoke('connectors:testTool', id)
   },
   automations: {
     list: (projectId) => ipcRenderer.invoke('automations:list', projectId),

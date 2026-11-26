@@ -6,8 +6,9 @@
 import { shell } from 'electron'
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { AccountId, AccountStatus } from '../../shared/types'
 import { connectCodex } from '../agents/codex-rpc'
@@ -46,15 +47,21 @@ function runClaude(
     const env = { ...process.env }
     // Uma chave no ambiente faria o CLI ignorar o login da assinatura.
     delete env.ANTHROPIC_API_KEY
-    const child = spawn(claudeExe(), args, { env, windowsHide: true })
+    // Fora do login, a entrada do CLI fica fechada: aberta, ele espera por ela e o
+    // status passa de uns 3 s para 10 a 30 s (às vezes estourando o tempo).
+    const child = spawn(claudeExe(), args, {
+      env,
+      windowsHide: true,
+      stdio: [onOutput ? 'pipe' : 'ignore', 'pipe', 'pipe']
+    })
     let out = ''
     const take = (chunk: Buffer): void => {
       const text = chunk.toString()
       out += text
       onOutput?.(text)
     }
-    child.stdout.on('data', take)
-    child.stderr.on('data', take)
+    child.stdout?.on('data', take)
+    child.stderr?.on('data', take)
     const timer = setTimeout(() => {
       child.kill()
       reject(new Error('O Claude demorou demais para responder.'))
@@ -70,9 +77,45 @@ function runClaude(
   })
 }
 
-async function claudeStatus(): Promise<AccountStatus> {
+/**
+ * Leitura rápida do login do Claude Code pelos arquivos dele: `claude auth status`
+ * leva de 15 s a mais de 1 min fora de um terminal. Só confere se o login existe
+ * (nenhum token é lido para fora daqui). Devolve null se não der para saber (aí
+ * pergunta ao CLI).
+ */
+async function claudeStatusFromFiles(): Promise<AccountStatus | null> {
   try {
-    const { out } = await runClaude(['auth', 'status', '--json'], 30_000)
+    const home = homedir()
+    const configDir = process.env.CLAUDE_CONFIG_DIR || join(home, '.claude')
+    const credentials = JSON.parse(
+      await readFile(join(configDir, '.credentials.json'), 'utf8')
+    ) as { claudeAiOauth?: { refreshToken?: string; subscriptionType?: string } }
+    const oauth = credentials.claudeAiOauth
+    if (!oauth?.refreshToken) return { id: 'claude', connected: false, detail: null }
+    const config = JSON.parse(
+      await readFile(join(process.env.CLAUDE_CONFIG_DIR || home, '.claude.json'), 'utf8')
+    ) as { oauthAccount?: { emailAddress?: string } }
+    return {
+      id: 'claude',
+      connected: true,
+      detail:
+        [
+          config.oauthAccount?.emailAddress,
+          oauth.subscriptionType && `plano ${oauth.subscriptionType}`
+        ]
+          .filter(Boolean)
+          .join(' · ') || 'Conectado'
+    }
+  } catch {
+    return null
+  }
+}
+
+async function claudeStatus(): Promise<AccountStatus> {
+  const fast = await claudeStatusFromFiles()
+  if (fast) return fast
+  try {
+    const { out } = await runClaude(['auth', 'status', '--json'], 90_000)
     const data = JSON.parse(out.slice(out.indexOf('{'))) as {
       loggedIn?: boolean
       email?: string

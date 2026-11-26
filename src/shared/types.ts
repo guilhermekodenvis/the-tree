@@ -56,6 +56,19 @@ export interface AccountStatus {
   error?: string
 }
 
+/**
+ * Conectores que viram ferramentas dos agentes (Claude e ChatGPT): ligados, aparecem
+ * para o agente em qualquer conversa, chat rápido ou automação.
+ */
+export type ToolConnectorId = 'maps' | 'browser'
+
+export interface ToolConnectorStatus {
+  id: ToolConnectorId
+  connected: boolean
+  /** Ex.: "Chave de API salva". */
+  detail: string | null
+}
+
 export interface Project {
   id: string
   /** Nome mostrado no app. Começa igual ao da pasta, mas pode ser trocado. */
@@ -314,6 +327,13 @@ export interface TreeApi {
     remove(id: string): Promise<void>
     /** Envia um e-mail de teste para o próprio endereço; devolve o endereço. */
     test(id: string): Promise<string>
+    /** Situação do Google Maps e do Navegador. */
+    tools(): Promise<ToolConnectorStatus[]>
+    /** Liga um conector de ferramenta. O Google Maps exige a chave na primeira vez. */
+    connectTool(id: ToolConnectorId, key?: string): Promise<ToolConnectorStatus>
+    disconnectTool(id: ToolConnectorId): Promise<ToolConnectorStatus>
+    /** Faz um uso de teste; devolve o que deu certo, em português. */
+    testTool(id: ToolConnectorId): Promise<string>
   }
   automations: {
     list(projectId: string): Promise<AutomationSummary[]>

@@ -14,7 +14,8 @@ import type {
   JsonRpcProcess,
   RequestId
 } from './rpc'
-import { clip, shortPath } from './describe'
+import { clip, shortPath, treeToolLabel } from './describe'
+import { TOOL_SERVER_NAME, toolServerUrl } from '../tools/server'
 
 type Emit = (event: AgentEvent) => void
 
@@ -98,6 +99,9 @@ function describeItem(item: CodexItem, cwd: string): { name: string; detail: str
         detail: (item.changes ?? []).map((c) => shortPath(c.path, cwd)).join(', ') + suffix
       }
     case 'mcpToolCall':
+      if (item.server === TOOL_SERVER_NAME) {
+        return { name: treeToolLabel(item.tool ?? '') ?? 'The Tree', detail: (item.tool ?? '') + suffix }
+      }
       return { name: item.server ?? 'MCP', detail: (item.tool ?? '') + suffix }
     case 'webSearch':
       return { name: 'Pesquisa', detail: item.query ?? '' }
@@ -280,7 +284,21 @@ export const codexAdapter: AgentAdapter = {
       })
       rpc.notify('initialized')
 
-      const options = { cwd, approvalPolicy: APPROVAL_POLICY, sandbox: SANDBOX }
+      // Ferramentas dos conectores ligados (Google Maps, Navegador), aprovadas sem
+      // perguntar: o usuário já escolheu ligá-las.
+      const tools = await toolServerUrl()
+      const config = tools
+        ? {
+            [`mcp_servers.${TOOL_SERVER_NAME}.url`]: tools,
+            [`mcp_servers.${TOOL_SERVER_NAME}.default_tools_approval_mode`]: 'approve'
+          }
+        : undefined
+      const options = {
+        cwd,
+        approvalPolicy: APPROVAL_POLICY,
+        sandbox: SANDBOX,
+        ...(config ? { config } : {})
+      }
       const result = resumeId
         ? await rpc.request<{ thread: { id: string } }>('thread/resume', {
             threadId: resumeId,

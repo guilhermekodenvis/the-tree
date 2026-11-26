@@ -6,7 +6,7 @@ mudar uma regra destas, confirme com ele antes.
 ## Janela, navegação e projetos
 
 - Menu lateral recolhível (lembrado em `localStorage`), com as seções **Projetos**,
-  **Skills** e **Conectores**.
+  **Skills**, **Modelos de IA** e **Conectores**.
 - **Projetos abrem em abas, como num navegador.** O "+" abre a tela de escolher
   projeto; o "×" ou o clique do meio fecha. Sem projeto aberto aparece "Nenhum
   projeto aberto" com o botão centralizado "Selecionar projeto". O antigo botão
@@ -117,19 +117,52 @@ Decididas com o dono numa conversa longa; estas são as escolhas dele:
 - Avisos do Windows: falha, aprovação pendente, expiração e conclusão de execuções
   agendadas; clicar abre a execução.
 
-## Conectores
+## Modelos de IA e Conectores (dois menus, mesmo jeito de usar)
 
-- A tela mostra os conectores adicionados em cartões (logo, conta, editar, excluir)
-  e um botão "Adicionar conector", que abre uma janela com as abas **Conectores
-  adicionados** (Editar conexão / Remover conexão) e **Novos conectores** (Conectar).
-- Catálogo, por decisão do dono, só com: **Claude, ChatGPT, Gemini e Gmail**. Logos
-  desenhadas em `components/ui/Logo.tsx` com cores em tokens `--color-brand-*`.
+- Por decisão do dono são **dois menus**: **Modelos de IA** (Claude e ChatGPT) e
+  **Conectores** (Gmail, Google Maps, Navegador e os que vierem). Os dois usam o molde
+  `components/connections/ConnectionsPage.tsx`: cartões (logo, conta, ações, editar,
+  excluir) e um botão "Adicionar…" que abre uma janela com as abas "…adicionados"
+  (Editar conexão / Remover conexão) e "Novos…" (Conectar). Logos em
+  `components/ui/Logo.tsx`, cores em tokens `--color-brand-*`.
+- **O Gemini saiu das telas de conexão** (pedido do dono). A chave dele continua na aba
+  Agentes do projeto ("Chave do Gemini…").
+
+### Modelos de IA
+
 - **Claude e ChatGPT** não têm login próprio no app: usam a conta do Claude Code e do
-  Codex do computador. Status por `claude auth status --json` (CLI que vem no Agent
-  SDK) e `account/read` do Codex app-server. Conectar = `claude auth login` /
-  `account/login/start` (abre o navegador; o link também aparece na tela). Remover =
-  logout, que vale para o computador inteiro (a tela avisa).
-- **Gemini** = chave de API (o mesmo formulário de antes).
+  Codex do computador. Conectar = `claude auth login` / `account/login/start` (abre o
+  navegador; o link também aparece na tela). Remover = logout, que vale para o
+  computador inteiro (a tela avisa).
+- Status do Claude: lido dos arquivos do Claude Code (`~/.claude/.credentials.json` só
+  para saber se há login, e o e-mail de `~/.claude.json`), porque
+  `claude auth status --json` leva de 15 s a mais de 1 min fora de um terminal. O CLI
+  só é chamado se os arquivos não existirem, sempre com a entrada (stdin) fechada.
+  Status do ChatGPT: `account/read` do Codex app-server (uns 15 s).
+
+### Conectores
+
+- **Google Maps e Navegador viram ferramentas dos agentes.** `tools/server.ts` é um
+  servidor MCP mínimo dentro do app (HTTP só em 127.0.0.1, caminho com código
+  aleatório por abertura, recusa `Origin` e outro `Host`). `claude.ts` passa ele em
+  `mcpServers` (com `allowedTools: ['mcp__the-tree']`, sem pedir autorização) e
+  `codex.ts` em `config` do `thread/start` (`mcp_servers.the-tree.url` e
+  `default_tools_approval_mode = approve`). Só entra se algum conector de ferramenta
+  estiver ligado; a lista de ferramentas é montada a cada pedido. O Gemini não recebe.
+- Estado em `tool-connectors.json` (`tools/state.ts`, gravações em fila); chave do
+  Google Maps no cofre (`connector:google-maps`).
+- **Google Maps**: Places API (New) com a chave do dono (cobrada pelo Google).
+  Ferramentas `places_search` (várias consultas por pedido) e `place_details`. Os nomes
+  dos campos (`place_id`, `rating`, `rating_count`, `phone_number` sem espaços,
+  `reviews`) seguem o que a skill de prospecção dele espera. "Testar" faz uma pesquisa
+  sem avaliações (a mais barata).
+- **Navegador**: janela invisível do Electron (`offscreen`), sessão só na memória, sem
+  downloads, pop-ups nem permissões, no máximo 3 ao mesmo tempo. `browser_open` devolve
+  texto, links, links de WhatsApp e sinais de chat (fornecedores conhecidos, variáveis
+  globais, elementos, scripts) e aceita um `script`; `browser_screenshot` devolve JPEG.
+  Escolhido em vez do Claude in Chrome, que só existe nos apps da Anthropic.
+- Na conversa, as ferramentas aparecem como "Google Maps" e "Navegador"
+  (`treeToolLabel` em `agents/describe.ts`).
 - **Gmail**: e-mail SMTP (smtp.gmail.com:587 STARTTLS + **senha de app**, que exige
   verificação em duas etapas). Pode haver vários; o passo de e-mail escolhe qual.
   Conectores SMTP antigos que não são Gmail continuam aparecendo e editáveis.

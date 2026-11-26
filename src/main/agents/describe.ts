@@ -12,3 +12,17 @@ export function clip(text: string, max: number): string {
   if (text.length <= max) return text
   return `${text.slice(0, max)}\n… (cortado: ${text.length} caracteres no total)`
 }
+
+/** Nomes, na conversa, das ferramentas dos conectores do The Tree (tools/server.ts). */
+const TREE_TOOLS: Record<string, string> = {
+  places_search: 'Google Maps',
+  place_details: 'Google Maps',
+  browser_open: 'Navegador',
+  browser_screenshot: 'Navegador'
+}
+
+/** "mcp__the-tree__places_search" (Claude) ou "places_search" (Codex) vira "Google Maps". */
+export function treeToolLabel(name: string): string | null {
+  const short = name.replace(/^mcp__the-tree__/, '')
+  return short !== name || name in TREE_TOOLS ? (TREE_TOOLS[short] ?? null) : null
+}

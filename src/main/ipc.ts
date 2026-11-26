@@ -1,7 +1,13 @@
 // Liga cada chamada da interface (window.api.*) ao serviço correspondente.
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { Automation, ConnectorInput } from '../shared/automation'
-import type { AccountId, AgentId, AgentSettings, Attachment } from '../shared/types'
+import type {
+  AccountId,
+  AgentId,
+  AgentSettings,
+  Attachment,
+  ToolConnectorId
+} from '../shared/types'
 import * as projects from './projects/store'
 import * as files from './files/service'
 import * as watcher from './files/watcher'
@@ -12,6 +18,10 @@ import { AutomationEngine, type EngineHooks } from './automations/engine'
 import * as connectors from './connectors/store'
 import * as accounts from './accounts/service'
 import * as attachments from './attachments/store'
+import * as toolState from './tools/state'
+import { TOOL_CONNECTORS } from './tools/state'
+import * as mapsTools from './tools/maps'
+import * as browserTools from './tools/browser'
 import { checkNow, installNow, updateState } from './updater'
 import { hasSecret, removeSecret, setSecret } from './secrets'
 
@@ -137,6 +147,25 @@ export function registerIpc(hooks: Pick<EngineHooks, 'notify'>): {
   ipcMain.handle('connectors:save', (_e, input: ConnectorInput) => connectors.upsert(input))
   ipcMain.handle('connectors:remove', (_e, id: string) => connectors.remove(id))
   ipcMain.handle('connectors:test', (_e, id: string) => connectors.test(id))
+
+  const toolId = (id: unknown): ToolConnectorId => {
+    if (!TOOL_CONNECTORS.includes(id as ToolConnectorId)) throw new Error('Conector desconhecido.')
+    return id as ToolConnectorId
+  }
+  ipcMain.handle('connectors:tools', () => toolState.statusAll())
+  ipcMain.handle('connectors:connectTool', async (_e, id: unknown, key: unknown) => {
+    const which = toolId(id)
+    await toolState.connect(which, typeof key === 'string' ? key : undefined)
+    return toolState.status(which)
+  })
+  ipcMain.handle('connectors:disconnectTool', async (_e, id: unknown) => {
+    const which = toolId(id)
+    await toolState.disconnect(which)
+    return toolState.status(which)
+  })
+  ipcMain.handle('connectors:testTool', (_e, id: unknown) =>
+    toolId(id) === 'maps' ? mapsTools.test() : browserTools.test()
+  )
 
   ipcMain.handle('automations:list', (_e, projectId: string) => engine.list(projectId))
   ipcMain.handle('automations:unseen', (_e, projectId: string) => engine.unseen(projectId))

@@ -2,7 +2,7 @@
 // fora). As cores vêm dos tokens --color-brand-* do design system.
 import { useId } from 'react'
 
-export type LogoName = 'claude' | 'codex' | 'gemini' | 'gmail' | 'smtp'
+export type LogoName = 'claude' | 'codex' | 'gemini' | 'gmail' | 'smtp' | 'maps' | 'browser'
 
 export function Logo({ name, size = 32 }: { name: LogoName; size?: number }) {
   const gradient = useId()
@@ -82,6 +82,32 @@ export function Logo({ name, size = 32 }: { name: LogoName; size?: number }) {
             fill="var(--color-brand-google-yellow)"
             d="M22 8.4V6.6c0-1.7-1.9-2.6-3.2-1.6L18 5.6v5.8Z"
           />
+        </svg>
+      )
+    case 'maps':
+      // Alfinete do Google Maps, com as cores do Google.
+      return (
+        <svg {...common}>
+          <path
+            fill="var(--color-brand-google-green)"
+            d="M12 1.5a7.5 7.5 0 0 0-7.5 7.5c0 2 .8 3.8 2 5.2L12 8.7Z"
+          />
+          <path fill="var(--color-brand-google-blue)" d="M12 1.5a7.5 7.5 0 0 1 5.6 12.5L12 8.7Z" />
+          <path
+            fill="var(--color-brand-google-yellow)"
+            d="M6.5 14.2c1.7 2 3.6 3.9 4.6 6.4.3.8 1.5.8 1.8 0 1-2.5 2.9-4.4 4.7-6.6L12 8.7Z"
+          />
+          <circle cx="12" cy="9" r="2.7" fill="var(--color-brand-google-red)" />
+        </svg>
+      )
+    case 'browser':
+      // Globo: o navegador do próprio The Tree.
+      return (
+        <svg {...common}>
+          <g fill="none" stroke="var(--color-accent)" strokeWidth="1.6">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3c2.5 2.5 3.6 5.5 3.6 9s-1.1 6.5-3.6 9c-2.5-2.5-3.6-5.5-3.6-9S9.5 5.5 12 3Z" />
+          </g>
         </svg>
       )
     case 'smtp':

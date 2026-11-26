@@ -38,6 +38,7 @@ export type IconName =
   | 'zoomIn'
   | 'zoomOut'
   | 'fit'
+  | 'sparkle'
 
 const paths: Record<IconName, ReactNode> = {
   folder: (
@@ -92,6 +93,9 @@ const paths: Record<IconName, ReactNode> = {
   zoomOut: <path d="M7 12.25A5.25 5.25 0 1 0 7 1.75a5.25 5.25 0 0 0 0 10.5ZM14.25 14.25 10.75 10.75M4.75 7h4.5" />,
   fit: <path d="M2.75 5.75v-3h3M10.25 2.75h3v3M13.25 10.25v3h-3M5.75 13.25h-3v-3" />,
   dismiss: <path d="m3.5 3.5 9 9m0-9-9 9" />,
+  sparkle: (
+    <path d="M8 1.75c.35 3.3 2.95 5.9 6.25 6.25-3.3.35-5.9 2.95-6.25 6.25C7.65 10.95 5.05 8.35 1.75 8 5.05 7.65 7.65 5.05 8 1.75Z" />
+  ),
   tree: (
     <>
       <path d="M8 14.25V8.5M8 11 5.25 8.75M8 9.75l2.5-2" />

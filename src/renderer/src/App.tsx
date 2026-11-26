@@ -15,6 +15,7 @@ import { ProjectsScreen } from './components/ProjectsScreen'
 import { ProjectTabs } from './components/ProjectTabs'
 import { SkillsScreen } from './components/SkillsScreen'
 import { ConnectorsScreen } from './components/ConnectorsScreen'
+import { ModelsScreen } from './components/ModelsScreen'
 import { QuickChatList, QuickChatScreen } from './components/QuickChats'
 import { UpdateBanner } from './components/UpdateBanner'
 import type { OpenRunTarget } from './components/automations/AutomationsTab'
@@ -136,6 +137,7 @@ export function App() {
         )}
 
         {section === 'skills' && <SkillsScreen />}
+        {section === 'models' && <ModelsScreen />}
         {section === 'connectors' && <ConnectorsScreen />}
         {section === 'quick' && <QuickChatScreen state={conversations} />}
 

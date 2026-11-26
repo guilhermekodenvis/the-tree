@@ -5,11 +5,12 @@ import { Icon, type IconName } from './ui/Icon'
 import { IconButton } from './ui/Button'
 
 /** 'quick': um chat rápido aberto (a lista fica abaixo dos itens do menu). */
-export type Section = 'projects' | 'skills' | 'connectors' | 'quick'
+export type Section = 'projects' | 'skills' | 'models' | 'connectors' | 'quick'
 
 const ITEMS: { id: Exclude<Section, 'quick'>; label: string; icon: IconName }[] = [
   { id: 'projects', label: 'Projetos', icon: 'folders' },
   { id: 'skills', label: 'Skills', icon: 'skill' },
+  { id: 'models', label: 'Modelos de IA', icon: 'sparkle' },
   { id: 'connectors', label: 'Conectores', icon: 'plug' }
 ]
 

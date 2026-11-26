@@ -16,7 +16,8 @@ import type {
 import type { AgentEvent, AgentSettings } from '../../shared/types'
 import { attachmentsDir } from '../attachments/store'
 import type { AgentAdapter, ImageInput } from './adapter'
-import { clip, shortPath } from './describe'
+import { clip, shortPath, treeToolLabel } from './describe'
+import { TOOL_SERVER_NAME, toolServerUrl } from '../tools/server'
 
 type Emit = (event: AgentEvent) => void
 
@@ -84,6 +85,7 @@ const PATH_FIELDS = new Set(['file_path', 'path', 'notebook_path'])
 
 /** Resumo de uma linha do que a ferramenta vai fazer, para mostrar na conversa. */
 function describe(input: Record<string, unknown>, cwd: string): string {
+  if (Array.isArray(input.queries)) return input.queries.join(' · ')
   for (const field of ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description']) {
     const value = input[field]
     if (typeof value === 'string' && value) {
@@ -160,7 +162,7 @@ function translate(sessionId: string, session: Live, message: SDKMessage): void 
             type: 'tool',
             sessionId,
             id: block.id,
-            name: block.name,
+            name: treeToolLabel(block.name) ?? block.name,
             detail: describe(block.input as Record<string, unknown>, session.cwd)
           })
         }
@@ -258,6 +260,10 @@ export const claudeAdapter: AgentAdapter = {
         emit({ type: 'status', sessionId, status: 'waiting' })
       })
 
+    // Ferramentas dos conectores ligados (Google Maps, Navegador), liberadas sem
+    // pedir autorização: o usuário já escolheu ligá-las.
+    const tools = await toolServerUrl()
+
     const session: Live = {
       queue,
       pending,
@@ -281,6 +287,12 @@ export const claudeAdapter: AgentAdapter = {
           // assim abrir um anexo não vira pedido de autorização.
           additionalDirectories: [attachmentsDir()],
           includePartialMessages: true,
+          ...(tools
+            ? {
+                mcpServers: { [TOOL_SERVER_NAME]: { type: 'http' as const, url: tools } },
+                allowedTools: [`mcp__${TOOL_SERVER_NAME}`]
+              }
+            : {}),
           // Modelo e esforço escolhidos na conversa (ver shared/agents.ts).
           ...(settings.model ? { model: settings.model } : {}),
           ...(settings.effort ? { effort: settings.effort as EffortLevel } : {})

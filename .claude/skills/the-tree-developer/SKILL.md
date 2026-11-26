@@ -21,7 +21,8 @@ paralelo: **Claude** (Claude Code via Agent SDK), **ChatGPT** (Codex via
 `codex app-server`) e **Gemini** (Gemini CLI via ACP). Por cima disso há **skills**
 (instruções reutilizáveis), **automações** (fluxos de passos que rodam sozinhos num
 horário), **chats rápidos** (conversas fora de projeto, no menu lateral), **anexos**
-no chat, **conectores** (contas dos agentes e e-mail SMTP) e o app fica na **bandeja do Windows** para as
+no chat, **modelos de IA** (contas do Claude e do ChatGPT), **conectores** (Gmail por
+SMTP, e Google Maps e Navegador, que viram ferramentas dos agentes) e o app fica na **bandeja do Windows** para as
 automações dispararem com a janela fechada. É distribuído como instalador NSIS.
 
 Toda a interface, os textos, as mensagens de erro e os comentários do código são em
@@ -48,6 +49,9 @@ src/main/        processo principal (Node)
   automations/     engine.ts (fila, execução, aprovação, agendador), js.ts (vm), store.ts,
                    agent-run.ts (conversa temporária de um passo)
   connectors/      store.ts (SMTP com nodemailer)
+  tools/           ferramentas dos agentes vindas dos conectores: server.ts (servidor MCP
+                   local), state.ts (ligados/desligados), maps.ts (Places API), browser.ts
+                   (navegador invisível)
   accounts/        service.ts (login/status/logout de Claude e Codex pelos CLIs; Gemini = chave)
   attachments/     store.ts (cópia dos anexos, protocolo tree-attachment:// das miniaturas)
   skills/          store.ts (skills.json), prompt.ts (injeta a skill na mensagem)
@@ -94,7 +98,8 @@ app instalado e o `npm run dev` compartilharem os mesmos dados):
 | `automations.json` | todas as automações |
 | `automation-runs/<automationId>/<runId>.json` | uma execução por arquivo (até 100 por automação) |
 | `connectors.json` | conectores SMTP, sem senha |
-| `secrets.json` | chave do Gemini e senhas dos conectores, criptografadas |
+| `tool-connectors.json` | Google Maps e Navegador ligados ou não |
+| `secrets.json` | chave do Gemini, chave do Google Maps e senhas dos conectores, criptografadas |
 | `app-state.json` | `startupConfigured`, `trayHintShown` |
 | `attachments/<uuid>/<arquivo>` | cópias dos anexos do chat |
 | `quick-chats/` | pasta de trabalho dos agentes nos chats rápidos |
