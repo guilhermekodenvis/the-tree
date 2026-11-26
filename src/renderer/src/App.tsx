@@ -15,6 +15,7 @@ import { ProjectsScreen } from './components/ProjectsScreen'
 import { ProjectTabs } from './components/ProjectTabs'
 import { SkillsScreen } from './components/SkillsScreen'
 import { ConnectorsScreen } from './components/ConnectorsScreen'
+import { QuickChatList, QuickChatScreen } from './components/QuickChats'
 import type { OpenRunTarget } from './components/automations/AutomationsTab'
 import { Button } from './components/ui/Button'
 import { Icon } from './components/ui/Icon'
@@ -106,7 +107,17 @@ export function App() {
           setSection(next)
           setPicking(false)
         }}
-      />
+      >
+        <QuickChatList
+          state={conversations}
+          active={section === 'quick'}
+          collapsed={collapsed}
+          onOpen={() => {
+            setSection('quick')
+            setPicking(false)
+          }}
+        />
+      </NavMenu>
       <div className="workspace">
         {inProjects && openProjects.length > 0 && (
           <ProjectTabs
@@ -124,6 +135,7 @@ export function App() {
 
         {section === 'skills' && <SkillsScreen />}
         {section === 'connectors' && <ConnectorsScreen />}
+        {section === 'quick' && <QuickChatScreen state={conversations} />}
 
         {showPicker && (
           <ProjectsScreen state={projects} onOpen={openProject} onRemove={removeProject} />

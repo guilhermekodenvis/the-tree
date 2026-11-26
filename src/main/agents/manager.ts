@@ -2,11 +2,16 @@
 // o histórico de cada conversa. Um projeto pode ter várias conversas, e cada uma
 // pode ter um agente rodando ao mesmo tempo: é assim que dá para usar Claude e
 // ChatGPT em paralelo.
+import { app } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { resolveSettings } from '../../shared/agents'
 import { addUserMessage, applyEvent, setPermission } from '../../shared/chat'
+import { QUICK_PROJECT_ID } from '../../shared/types'
 import type {
   AgentEvent,
+  Attachment,
   AgentId,
   AgentSession,
   AgentSettings,
@@ -22,6 +27,32 @@ import * as history from './history'
 import * as projects from '../projects/store'
 import { withSkills } from '../skills/prompt'
 import * as skillStore from '../skills/store'
+import { isAttachment } from '../attachments/store'
+
+/** Pasta onde os agentes dos chats rápidos trabalham (não há projeto). */
+async function quickFolder(): Promise<string> {
+  const dir = join(app.getPath('userData'), 'quick-chats')
+  await mkdir(dir, { recursive: true })
+  return dir
+}
+
+/** Pasta de trabalho da conversa: a do projeto, ou a dos chats rápidos. */
+async function workFolder(projectId: string): Promise<string> {
+  if (projectId === QUICK_PROJECT_ID) return quickFolder()
+  const project = await projects.get(projectId)
+  if (!project) throw new Error(`Projeto não encontrado: ${projectId}`)
+  return project.path
+}
+
+/** Lista os anexos no fim da mensagem, para o agente poder abrir pelo caminho. */
+function withAttachments(message: string, attachments: Attachment[]): string {
+  if (attachments.length === 0) return message
+  const lines = attachments.map(
+    (a) => `- ${a.path}${a.kind === 'image' ? ' (imagem, também enviada junto)' : ''}`
+  )
+  const header = 'Arquivos anexados pelo usuário (abra pelo caminho se precisar):'
+  return [message, '', header, ...lines].join('\n')
+}
 
 export const adapters: Record<AgentId, AgentAdapter> = {
   claude: claudeAdapter,
@@ -111,8 +142,7 @@ export class AgentManager {
   // ---- Sessões --------------------------------------------------------------
 
   async start(projectId: string, conversationId: string): Promise<AgentSession> {
-    const project = await projects.get(projectId)
-    if (!project) throw new Error(`Projeto não encontrado: ${projectId}`)
+    const cwd = await workFolder(projectId)
     const record = await history.get(projectId, conversationId)
 
     // Um agente por conversa: iniciar de novo substitui o anterior.
@@ -144,7 +174,7 @@ export class AgentManager {
     try {
       await adapters[record.agent].start(
         session.id,
-        project.path,
+        cwd,
         emit,
         record.resumeId,
         resolveSettings(record.agent, record.settings)
@@ -160,8 +190,17 @@ export class AgentManager {
    * Envia a mensagem. Com skills, o texto delas vai junto para o agente; o
    * histórico guarda só a sua mensagem e os nomes das skills.
    */
-  async send(sessionId: string, message: string, skillIds: string[] = []): Promise<void> {
+  async send(
+    sessionId: string,
+    message: string,
+    skillIds: string[] = [],
+    attachments: Attachment[] = []
+  ): Promise<void> {
     const session = this.sessionOf(sessionId)
+    // Só anexos guardados pelo app; um caminho qualquer vindo da tela é recusado.
+    if (attachments.some((a) => !isAttachment(a.path))) {
+      throw new Error('Um dos anexos não foi encontrado. Anexe o arquivo de novo.')
+    }
     // Lê as skills antes de gravar: se uma sumiu do disco, nada é enviado.
     const skills = await skillStore.contents(session.projectId, skillIds)
     history.update(session.projectId, session.conversationId, (c) => ({
@@ -169,10 +208,18 @@ export class AgentManager {
       items: addUserMessage(
         c.items,
         message,
-        skills.map((s) => s.name)
+        skills.map((s) => s.name),
+        attachments
       )
     }))
-    await adapters[session.agent].send(sessionId, withSkills(message, skills))
+    const images = attachments
+      .filter((a) => a.kind === 'image')
+      .map((a) => ({ path: a.path, mime: a.mime }))
+    await adapters[session.agent].send(
+      sessionId,
+      withAttachments(withSkills(message, skills), attachments),
+      images
+    )
   }
 
   async respond(sessionId: string, requestId: string, allow: boolean): Promise<void> {

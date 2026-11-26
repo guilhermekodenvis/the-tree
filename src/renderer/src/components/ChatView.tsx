@@ -1,8 +1,16 @@
 // Conversa com um agente: histórico, pedidos de autorização e caixa de mensagem.
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { agentInfo, type Choice } from '../../../shared/agents'
-import type { AgentId, AgentSettings, ChatItem, SessionStatus, Skill } from '../../../shared/types'
+import type {
+  AgentId,
+  AgentSettings,
+  Attachment,
+  ChatItem,
+  SessionStatus,
+  Skill
+} from '../../../shared/types'
 import type { Chat } from '../hooks/useConversations'
+import { AttachmentList } from './AttachmentList'
 import { Composer } from './Composer'
 import { Markdown } from './Markdown'
 import { MarkdownReader } from './MarkdownReader'
@@ -33,7 +41,7 @@ interface Props {
   onBypassChange(on: boolean): void
   /** Skills que a conversa pode usar no menu "/". */
   loadSkills(): Promise<Skill[]>
-  onSend(text: string, skills: Skill[]): void
+  onSend(text: string, skills: Skill[], attachments: Attachment[]): void
   onRespond(requestId: string, allow: boolean): void
   onInterrupt(): void
 }
@@ -190,9 +198,9 @@ export function ChatView(props: Props) {
           busy={busy}
           canInterrupt={busy && !starting}
           loadSkills={loadSkills}
-          onSend={(text, skills) => {
+          onSend={(text, skills, attachments) => {
             stickToBottom.current = true
-            onSend(text, skills)
+            onSend(text, skills, attachments)
           }}
           onInterrupt={onInterrupt}
         />
@@ -268,6 +276,9 @@ export function ChatItemView({
               ))}
             </div>
           )}
+          {item.attachments && item.attachments.length > 0 && (
+            <AttachmentList attachments={item.attachments} />
+          )}
           {item.text}
         </div>
       )
@@ -321,3 +332,4 @@ export function ChatItemView({
       )
   }
 }
+

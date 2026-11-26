@@ -5,6 +5,7 @@
 // Cada sessão é um processo de vida longa: as mensagens do usuário entram por uma
 // fila e as respostas saem como um fluxo de eventos, traduzidos para AgentEvent.
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import type {
   CanUseTool,
   EffortLevel,
@@ -13,7 +14,8 @@ import type {
   SDKUserMessage
 } from '@anthropic-ai/claude-agent-sdk'
 import type { AgentEvent, AgentSettings } from '../../shared/types'
-import type { AgentAdapter } from './adapter'
+import { attachmentsDir } from '../attachments/store'
+import type { AgentAdapter, ImageInput } from './adapter'
 import { clip, shortPath } from './describe'
 
 type Emit = (event: AgentEvent) => void
@@ -275,6 +277,9 @@ export const claudeAdapter: AgentAdapter = {
           // 'default' mantém as aprovações manuais: nada que altere o projeto roda
           // sem passar por canUseTool (salvo regras que você já liberou no Claude Code).
           permissionMode: 'default',
+          // Anexos ficam fora do projeto: a pasta deles é liberada para leitura,
+          // assim abrir um anexo não vira pedido de autorização.
+          additionalDirectories: [attachmentsDir()],
           includePartialMessages: true,
           // Modelo e esforço escolhidos na conversa (ver shared/agents.ts).
           ...(settings.model ? { model: settings.model } : {}),
@@ -287,11 +292,28 @@ export const claudeAdapter: AgentAdapter = {
     void consume(sessionId, session)
   },
 
-  async send(sessionId, message) {
+  async send(sessionId, message, images: ImageInput[] = []) {
     const session = sessionOf(sessionId)
+    // Com imagens, a mensagem vira blocos: as imagens (para o Claude ver) e o texto.
+    const content =
+      images.length === 0
+        ? message
+        : [
+            ...(await Promise.all(
+              images.map(async (image) => ({
+                type: 'image' as const,
+                source: {
+                  type: 'base64' as const,
+                  media_type: image.mime as 'image/png',
+                  data: (await readFile(image.path)).toString('base64')
+                }
+              }))
+            )),
+            { type: 'text' as const, text: message }
+          ]
     session.queue.push({
       type: 'user',
-      message: { role: 'user', content: message },
+      message: { role: 'user', content },
       parent_tool_use_id: null
     })
     session.emit({ type: 'status', sessionId, status: 'running' })

@@ -9,6 +9,7 @@
 // acesso é por chave de API do Google AI Studio. A chave fica criptografada pelo app
 // (ver secrets.ts) e é entregue ao Gemini a cada início de conversa.
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import type {
@@ -23,9 +24,14 @@ import type {
 } from '@agentclientprotocol/sdk'
 import type { AgentEvent } from '../../shared/types'
 import { getSecret } from '../secrets'
-import type { AgentAdapter } from './adapter'
+import type { AgentAdapter, ImageInput } from './adapter'
 import { clip, shortPath } from './describe'
-import { JsonRpcProcess, type IncomingNotification, type IncomingRequest, type RequestId } from './rpc'
+import {
+  JsonRpcProcess,
+  type IncomingNotification,
+  type IncomingRequest,
+  type RequestId
+} from './rpc'
 
 type Emit = (event: AgentEvent) => void
 
@@ -91,6 +97,8 @@ interface Live {
   tools: Map<string, { name: string; detail: string }>
   /** Enquanto retoma uma conversa, o Gemini repete o histórico; isso não vai para a tela. */
   replaying: boolean
+  /** O Gemini aceita imagens no pedido (sem isso, só o caminho vai no texto). */
+  acceptsImages: boolean
   interrupted: boolean
   stopped: boolean
 }
@@ -123,7 +131,10 @@ function locateGemini(): string {
 }
 
 /** Inicia o Gemini CLI usando o próprio Node embutido no Electron. */
-function spawnGemini(cwd: string, handlers: ConstructorParameters<typeof JsonRpcProcess>[1]): JsonRpcProcess {
+function spawnGemini(
+  cwd: string,
+  handlers: ConstructorParameters<typeof JsonRpcProcess>[1]
+): JsonRpcProcess {
   return new JsonRpcProcess(
     {
       name: 'Gemini',
@@ -159,7 +170,12 @@ function describeRequest(request: RequestPermissionRequest, cwd: string): string
   return clip(parts.join('\n\n'), 4000)
 }
 
-function toolLine(kind: ToolKind | null | undefined, title: string, locations: { path: string }[] | null | undefined, cwd: string) {
+function toolLine(
+  kind: ToolKind | null | undefined,
+  title: string,
+  locations: { path: string }[] | null | undefined,
+  cwd: string
+) {
   const name = (kind && KIND_NAME[kind]) || 'Ferramenta'
   const path = locations?.[0]?.path
   return { name, detail: path && kind !== 'execute' ? shortPath(path, cwd) : title }
@@ -188,7 +204,13 @@ function handleUpdate(sessionId: string, session: Live, notification: SessionNot
     case 'tool_call_update': {
       const line = session.tools.get(update.toolCallId)
       if (line && update.status === 'failed') {
-        emit({ type: 'tool', sessionId, id: update.toolCallId, name: line.name, detail: `${line.detail} (falhou)` })
+        emit({
+          type: 'tool',
+          sessionId,
+          id: update.toolCallId,
+          name: line.name,
+          detail: `${line.detail} (falhou)`
+        })
       }
       return
     }
@@ -209,7 +231,9 @@ function handleRequest(sessionId: string, session: Live, request: IncomingReques
     type: 'permission',
     sessionId,
     requestId,
-    title: (params.toolCall.kind && REQUEST_TITLE[params.toolCall.kind]) || 'O Gemini quer usar uma ferramenta',
+    title:
+      (params.toolCall.kind && REQUEST_TITLE[params.toolCall.kind]) ||
+      'O Gemini quer usar uma ferramenta',
     detail: describeRequest(params, session.cwd)
   })
   session.emit({ type: 'status', sessionId, status: 'waiting' })
@@ -290,6 +314,7 @@ export const geminiAdapter: AgentAdapter = {
         textKey: null,
         tools: new Map(),
         replaying: false,
+        acceptsImages: init.agentCapabilities?.promptCapabilities?.image === true,
         interrupted: false,
         stopped: false
       }
@@ -328,8 +353,17 @@ export const geminiAdapter: AgentAdapter = {
     }
   },
 
-  async send(sessionId, message) {
+  async send(sessionId, message, images: ImageInput[] = []) {
     const session = sessionOf(sessionId)
+    const pictures = session.acceptsImages
+      ? await Promise.all(
+          images.map(async (image) => ({
+            type: 'image' as const,
+            mimeType: image.mime,
+            data: (await readFile(image.path)).toString('base64')
+          }))
+        )
+      : []
     session.textKey = null
     session.interrupted = false
     session.emit({ type: 'status', sessionId, status: 'running' })
@@ -338,7 +372,7 @@ export const geminiAdapter: AgentAdapter = {
     session.rpc
       .request<PromptResponse>('session/prompt', {
         sessionId: session.acpSessionId,
-        prompt: [{ type: 'text', text: message }]
+        prompt: [{ type: 'text', text: message }, ...pictures]
       })
       .then((result) => {
         if (result.stopReason === 'cancelled' || session.interrupted) {
@@ -346,7 +380,11 @@ export const geminiAdapter: AgentAdapter = {
         } else if (result.stopReason === 'refusal') {
           session.emit({ type: 'error', sessionId, message: 'O Gemini recusou este pedido.' })
         } else if (result.stopReason !== 'end_turn') {
-          session.emit({ type: 'note', sessionId, message: `A resposta parou antes do fim (${result.stopReason}).` })
+          session.emit({
+            type: 'note',
+            sessionId,
+            message: `A resposta parou antes do fim (${result.stopReason}).`
+          })
         }
       })
       .catch((err) => {
@@ -370,7 +408,9 @@ export const geminiAdapter: AgentAdapter = {
     const optionId = pickOption(pending.options, allow)
     session.rpc.respond(
       pending.rpcId,
-      optionId ? { outcome: { outcome: 'selected', optionId } } : { outcome: { outcome: 'cancelled' } }
+      optionId
+        ? { outcome: { outcome: 'selected', optionId } }
+        : { outcome: { outcome: 'cancelled' } }
     )
     session.emit({ type: 'status', sessionId, status: 'running' })
   },

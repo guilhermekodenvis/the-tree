@@ -6,9 +6,14 @@
 // de autorização na interface ('on-request'). Mesmo que o modelo não peça, o sandbox
 // bloqueia a escrita.
 import type { AgentEvent, AgentSettings } from '../../shared/types'
-import type { AgentAdapter } from './adapter'
+import type { AgentAdapter, ImageInput } from './adapter'
 import { connectCodex } from './codex-rpc'
-import type { IncomingNotification as ServerNotification, IncomingRequest as ServerRequest, JsonRpcProcess, RequestId } from './rpc'
+import type {
+  IncomingNotification as ServerNotification,
+  IncomingRequest as ServerRequest,
+  JsonRpcProcess,
+  RequestId
+} from './rpc'
 import { clip, shortPath } from './describe'
 
 type Emit = (event: AgentEvent) => void
@@ -77,7 +82,10 @@ function describeItem(item: CodexItem, cwd: string): { name: string; detail: str
         return { name: 'Ler', detail: shortPath(action.path, cwd) + suffix }
       }
       if (action?.type === 'listFiles') {
-        return { name: 'Listar', detail: (action.path ? shortPath(action.path, cwd) : '.') + suffix }
+        return {
+          name: 'Listar',
+          detail: (action.path ? shortPath(action.path, cwd) : '.') + suffix
+        }
       }
       if (action?.type === 'search') {
         return { name: 'Buscar', detail: (action.query ?? '') + suffix }
@@ -102,7 +110,8 @@ function describeItem(item: CodexItem, cwd: string): { name: string; detail: str
 function describeChanges(item: CodexItem, cwd: string): string {
   const verbs: Record<string, string> = { add: 'Criar', delete: 'Apagar', update: 'Alterar' }
   const parts = (item.changes ?? []).map(
-    (change) => `${verbs[change.kind.type] ?? 'Alterar'}: ${shortPath(change.path, cwd)}\n${change.diff}`
+    (change) =>
+      `${verbs[change.kind.type] ?? 'Alterar'}: ${shortPath(change.path, cwd)}\n${change.diff}`
   )
   return clip(parts.join('\n\n'), 4000)
 }
@@ -127,12 +136,25 @@ function handleRequest(sessionId: string, session: Live, request: ServerRequest)
   switch (request.method) {
     case 'item/commandExecution/requestApproval': {
       const command = simplifyCommand(String(params.command ?? ''))
-      askPermission(sessionId, session, request, 'O ChatGPT quer rodar um comando', clip(reason + command, 4000))
+      askPermission(
+        sessionId,
+        session,
+        request,
+        'O ChatGPT quer rodar um comando',
+        clip(reason + command, 4000)
+      )
       return
     }
     case 'item/fileChange/requestApproval': {
-      const changes = session.changes.get(String(params.itemId)) ?? 'Alteração de arquivos no projeto.'
-      askPermission(sessionId, session, request, 'O ChatGPT quer alterar arquivos', clip(reason + changes, 4000))
+      const changes =
+        session.changes.get(String(params.itemId)) ?? 'Alteração de arquivos no projeto.'
+      askPermission(
+        sessionId,
+        session,
+        request,
+        'O ChatGPT quer alterar arquivos',
+        clip(reason + changes, 4000)
+      )
       return
     }
     default:
@@ -290,12 +312,16 @@ export const codexAdapter: AgentAdapter = {
     }
   },
 
-  async send(sessionId, message) {
+  async send(sessionId, message, images: ImageInput[] = []) {
     const session = sessionOf(sessionId)
     session.emit({ type: 'status', sessionId, status: 'running' })
     const result = await session.rpc.request<{ turn: { id: string } }>('turn/start', {
       threadId: session.threadId,
-      input: [{ type: 'text', text: message, text_elements: [] }],
+      // Imagens vão pelo caminho da cópia guardada; o Codex lê o arquivo.
+      input: [
+        { type: 'text', text: message, text_elements: [] },
+        ...images.map((image) => ({ type: 'localImage', path: image.path }))
+      ],
       ...(session.settings.model ? { model: session.settings.model } : {}),
       ...(session.settings.effort ? { effort: session.settings.effort } : {})
     })
@@ -318,7 +344,10 @@ export const codexAdapter: AgentAdapter = {
   async interrupt(sessionId) {
     const session = sessionOf(sessionId)
     if (!session.turnId) return
-    await session.rpc.request('turn/interrupt', { threadId: session.threadId, turnId: session.turnId })
+    await session.rpc.request('turn/interrupt', {
+      threadId: session.threadId,
+      turnId: session.turnId
+    })
   },
 
   async stop(sessionId) {

@@ -1,8 +1,11 @@
 // Caixa de mensagem da conversa. Digitar "/" abre o menu de skills: a escolhida
 // vira uma etiqueta acima do texto e vai junto com a próxima mensagem.
+// Anexos: colar uma imagem (Ctrl+V), arrastar arquivos para a caixa ou usar o clipe.
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import type { Skill } from '../../../shared/types'
-import { Button } from './ui/Button'
+import type { Attachment, Skill } from '../../../shared/types'
+import { messageOf } from '../lib/errors'
+import { AttachmentList } from './AttachmentList'
+import { Button, IconButton } from './ui/Button'
 import { Icon } from './ui/Icon'
 
 interface Props {
@@ -13,7 +16,7 @@ interface Props {
   canInterrupt: boolean
   /** Skills que esta conversa pode usar (globais e as deste projeto). */
   loadSkills(): Promise<Skill[]>
-  onSend(text: string, skills: Skill[]): void
+  onSend(text: string, skills: Skill[], attachments: Attachment[]): void
   onInterrupt(): void
 }
 
@@ -31,7 +34,14 @@ function matches(skill: Skill, query: string): boolean {
   return skill.name.toLowerCase().includes(q) || skill.description.toLowerCase().includes(q)
 }
 
-export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, onInterrupt }: Props) {
+export function Composer({
+  agentName,
+  busy,
+  canInterrupt,
+  loadSkills,
+  onSend,
+  onInterrupt
+}: Props) {
   const [draft, setDraft] = useState('')
   const [picked, setPicked] = useState<Skill[]>([])
   const [menu, setMenu] = useState<SlashMenu | null>(null)
@@ -40,8 +50,45 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
   const [active, setActive] = useState(0)
   const fieldRef = useRef<HTMLTextAreaElement>(null)
   const caretRef = useRef<number | null>(null)
+  const [files, setFiles] = useState<Attachment[]>([])
+  const [saving, setSaving] = useState(0)
+  const [fileError, setFileError] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(false)
 
-  const canSend = (draft.trim() !== '' || picked.length > 0) && !busy
+  const canSend =
+    (draft.trim() !== '' || picked.length > 0 || files.length > 0) && !busy && saving === 0
+
+  /** Guarda arquivos vindos da área de transferência ou arrastados. */
+  const addFiles = async (list: File[]): Promise<void> => {
+    if (list.length === 0) return
+    setFileError(null)
+    setSaving((n) => n + list.length)
+    for (const file of list) {
+      try {
+        // Print colado vem sem nome: ganha um com data e hora.
+        const name = file.name || `print-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+        const saved = await window.api.attachments.save(
+          name,
+          new Uint8Array(await file.arrayBuffer())
+        )
+        setFiles((current) => [...current, saved])
+      } catch (err) {
+        setFileError(messageOf(err))
+      } finally {
+        setSaving((n) => n - 1)
+      }
+    }
+  }
+
+  const pickFiles = async (): Promise<void> => {
+    setFileError(null)
+    try {
+      const chosen = await window.api.attachments.pick()
+      setFiles((current) => [...current, ...chosen])
+    } catch (err) {
+      setFileError(messageOf(err))
+    }
+  }
   const pickedIds = new Set(picked.map((s) => s.id))
   const filtered = menu
     ? (options ?? []).filter((s) => !pickedIds.has(s.id) && matches(s, menu.query))
@@ -59,7 +106,9 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
 
   // Item ativo sempre visível ao navegar com as setas.
   useEffect(() => {
-    document.querySelector('.skill-menu [aria-selected="true"]')?.scrollIntoView({ block: 'nearest' })
+    document
+      .querySelector('.skill-menu [aria-selected="true"]')
+      ?.scrollIntoView({ block: 'nearest' })
   }, [active])
 
   /** Abre, atualiza ou fecha o menu conforme o texto antes do cursor. */
@@ -94,9 +143,11 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
 
   const submit = (): void => {
     if (!canSend) return
-    onSend(draft.trim(), picked)
+    onSend(draft.trim(), picked, files)
     setDraft('')
     setPicked([])
+    setFiles([])
+    setFileError(null)
     setMenu(null)
   }
 
@@ -134,7 +185,23 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
   }
 
   return (
-    <div className="chat__composer">
+    <div
+      className={`chat__composer ${dragging ? 'chat__composer--drop' : ''}`}
+      onDragOver={(event) => {
+        if (!event.dataTransfer.types.includes('Files')) return
+        event.preventDefault()
+        setDragging(true)
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false)
+      }}
+      onDrop={(event) => {
+        if (event.dataTransfer.files.length === 0) return
+        event.preventDefault()
+        setDragging(false)
+        void addFiles([...event.dataTransfer.files])
+      }}
+    >
       {menu && (
         <div className="skill-menu" role="listbox" aria-label="Skills">
           <p className="popover__title">Skills</p>
@@ -194,12 +261,27 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
         </div>
       )}
 
+      {(files.length > 0 || saving > 0) && (
+        <div className="composer__files">
+          <AttachmentList
+            attachments={files}
+            onRemove={(file) => setFiles((current) => current.filter((f) => f.path !== file.path))}
+          />
+          {saving > 0 && <span className="text-caption">Anexando…</span>}
+        </div>
+      )}
+      {fileError && (
+        <p className="notice composer__error" role="alert">
+          {fileError}
+        </p>
+      )}
+
       <textarea
         ref={fieldRef}
         className="field"
         rows={3}
         value={draft}
-        placeholder={`Mensagem para o ${agentName} (digite / para usar uma skill)`}
+        placeholder={`Mensagem para o ${agentName} (digite / para usar uma skill; cole ou arraste arquivos)`}
         aria-label={`Mensagem para o ${agentName}`}
         aria-expanded={menu !== null}
         aria-autocomplete="list"
@@ -208,18 +290,29 @@ export function Composer({ agentName, busy, canInterrupt, loadSkills, onSend, on
           updateMenu(event.target.value, event.target.selectionStart)
         }}
         onKeyDown={onKeyDown}
+        onPaste={(event) => {
+          // Print ou arquivo copiado: vira anexo. Texto colado segue normal.
+          const pasted = [...event.clipboardData.files]
+          if (pasted.length === 0) return
+          event.preventDefault()
+          void addFiles(pasted)
+        }}
         onClick={(event) => updateMenu(draft, event.currentTarget.selectionStart)}
         onBlur={() => setMenu(null)}
       />
-      {canInterrupt ? (
-        <Button icon="stop" onClick={onInterrupt}>
-          Parar
-        </Button>
-      ) : (
-        <Button variant="accent" icon="send" disabled={!canSend} onClick={submit}>
-          Enviar
-        </Button>
-      )}
+      <div className="composer__actions">
+        <IconButton icon="attach" label="Anexar arquivos" onClick={() => void pickFiles()} />
+        <span className="step-panel__spacer" />
+        {canInterrupt ? (
+          <Button icon="stop" onClick={onInterrupt}>
+            Parar
+          </Button>
+        ) : (
+          <Button variant="accent" icon="send" disabled={!canSend} onClick={submit}>
+            Enviar
+          </Button>
+        )}
+      </div>
     </div>
   )
 }

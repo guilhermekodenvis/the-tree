@@ -53,11 +53,24 @@
   --color-stroke: light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));
   --color-stroke-strong: light-dark(rgb(0 0 0 / 0.16), rgb(255 255 255 / 0.14));
   --color-focus: light-dark(rgb(0 0 0 / 0.9), #ffffff);
+  --color-overlay: light-dark(rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.5)); /* fundo atrás de janelas sobrepostas */
 
   /* ---- Cores: identidade de cada agente ---------------------------------- */
   --color-agent-claude: light-dark(#c15f3c, #e08a6a);
   --color-agent-codex: light-dark(#0f8a6c, #3fcfa8);
   --color-agent-gemini: light-dark(#3367d6, #8ab4f8);
+
+  /* ---- Cores: logos das marcas (só nas logos dos conectores) -------------- */
+  --color-brand-claude: #d97757;
+  --color-brand-openai: light-dark(#000000, #ffffff);
+  --color-brand-gemini-start: #4285f4;
+  --color-brand-gemini-middle: #9b72cb;
+  --color-brand-gemini-end: #d96570;
+  --color-brand-google-red: #ea4335;
+  --color-brand-google-red-dark: #c5221f;
+  --color-brand-google-blue: #4285f4;
+  --color-brand-google-green: #34a853;
+  --color-brand-google-yellow: #fbbc04;
 
   /* ---- Tipografia -------------------------------------------------------- */
   --font-text: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
@@ -120,6 +133,8 @@
   --size-flow-node: 280px; /* cartão de um passo no quadro das automações */
   --size-step-panel: 400px; /* painel lateral que configura um passo */
   --size-runs-list: 260px; /* lista de execuções de uma automação */
-  --size-reader: 500px; /* leitor de .md/.mdx ao lado da conversa */ /* menus com nome e descrição (skills) */
+  --size-reader: 500px; /* leitor de .md/.mdx ao lado da conversa */
+  --size-modal: 720px; /* janela sobreposta (ex.: adicionar conector) */
+  --size-attachment: 72px; /* miniatura de imagem anexada */ /* menus com nome e descrição (skills) */
   --size-skill-menu-height: 280px; /* altura máxima do menu "/" da conversa */
 }

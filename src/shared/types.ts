@@ -12,6 +12,37 @@ import type {
 
 export type AgentId = 'claude' | 'codex' | 'gemini'
 
+/**
+ * "Projeto" interno dos chats rápidos (menu lateral): conversas fora de qualquer
+ * projeto, para tirar dúvidas ou tarefas rápidas. Não aparece na lista de projetos.
+ */
+export const QUICK_PROJECT_ID = '__quick'
+
+/** Arquivo anexado a uma mensagem (copiado para a pasta de anexos do app). */
+export interface Attachment {
+  name: string
+  /** Caminho completo da cópia guardada pelo app. */
+  path: string
+  mime: string
+  size: number
+  /** 'image': o agente recebe a imagem em si; 'file': recebe o caminho para ler. */
+  kind: 'image' | 'file'
+  /** Endereço para a tela mostrar a miniatura (tree-attachment://...). */
+  url: string
+}
+
+/** Conta de um agente, mostrada como conector. */
+export type AccountId = 'claude' | 'codex' | 'gemini'
+
+export interface AccountStatus {
+  id: AccountId
+  connected: boolean
+  /** Ex.: e-mail e plano da conta, ou "Chave de API salva". */
+  detail: string | null
+  /** Não foi possível conferir (ex.: o CLI não respondeu). */
+  error?: string
+}
+
 export interface Project {
   id: string
   /** Nome mostrado no app. Começa igual ao da pasta, mas pode ser trocado. */
@@ -113,7 +144,7 @@ export type PermissionState = 'pending' | 'allowed' | 'denied' | 'cancelled' | '
 /** Um item da conversa como aparece na tela (e como fica salvo no histórico). */
 export type ChatItem =
   /** `skills`: nomes das skills usadas nesta mensagem. */
-  | { kind: 'user'; id: string; text: string; skills?: string[] }
+  | { kind: 'user'; id: string; text: string; skills?: string[]; attachments?: Attachment[] }
   | { kind: 'assistant'; id: string; text: string }
   | { kind: 'tool'; id: string; name: string; detail: string }
   | { kind: 'permission'; id: string; title: string; detail: string; state: PermissionState }
@@ -197,7 +228,11 @@ export interface TreeApi {
      * Lê um arquivo .md/.mdx citado numa conversa (pode estar fora do projeto).
      * Caminho relativo vale a partir de `base` (arquivo aberto) ou do projeto.
      */
-    readMarkdown(projectId: string, path: string, base?: string): Promise<{ path: string; content: string }>
+    readMarkdown(
+      projectId: string,
+      path: string,
+      base?: string
+    ): Promise<{ path: string; content: string }>
   }
   settings: {
     /**
@@ -235,6 +270,22 @@ export interface TreeApi {
     /** Abre a pasta do arquivo no Explorer, com ele selecionado. */
     showInFolder(path: string): Promise<void>
   }
+  attachments: {
+    /** Guarda uma imagem colada ou um arquivo arrastado. */
+    save(name: string, bytes: Uint8Array): Promise<Attachment>
+    /** Abre o seletor do Windows; devolve [] se cancelar. */
+    pick(): Promise<Attachment[]>
+  }
+  accounts: {
+    /** Situação das contas do Claude, do ChatGPT e do Gemini. */
+    status(): Promise<AccountStatus[]>
+    /** Login oficial no navegador (Claude e ChatGPT). Termina quando o login acaba. */
+    login(id: AccountId): Promise<AccountStatus>
+    /** Sai da conta. No Claude e no ChatGPT, vale para o computador inteiro. */
+    logout(id: AccountId): Promise<AccountStatus>
+    /** Link do login, para o caso de o navegador não abrir sozinho. */
+    onLoginLink(listener: (link: { id: AccountId; url: string }) => void): () => void
+  }
   connectors: {
     list(): Promise<Connector[]>
     /** Cria (sem id) ou altera. Sem senha, a senha salva continua. */
@@ -261,7 +312,9 @@ export interface TreeApi {
     /** Algo mudou nas automações do projeto (devolve a função para parar de ouvir). */
     onChanged(listener: (projectId: string) => void): () => void
     /** Clique num aviso do Windows: abrir esta execução. */
-    onOpen(listener: (target: { projectId: string; automationId: string; runId: string }) => void): () => void
+    onOpen(
+      listener: (target: { projectId: string; automationId: string; runId: string }) => void
+    ): () => void
   }
   conversations: {
     /** Conversas do projeto, na ordem escolhida. Não inicia nenhum processo. */
@@ -295,8 +348,16 @@ export interface TreeApi {
   agents: {
     /** Inicia o agente de uma conversa, retomando o que já foi dito nela. */
     start(projectId: string, conversationId: string): Promise<AgentSession>
-    /** `skills`: ids das skills que o agente deve seguir nesta mensagem. */
-    send(sessionId: string, message: string, skills?: string[]): Promise<void>
+    /**
+     * `skills`: ids das skills que o agente deve seguir nesta mensagem.
+     * `attachments`: anexos já guardados pelo app (attachments.save/pick).
+     */
+    send(
+      sessionId: string,
+      message: string,
+      skills?: string[],
+      attachments?: Attachment[]
+    ): Promise<void>
     /** Responde a um pedido de autorização (evento 'permission'). */
     respond(sessionId: string, requestId: string, allow: boolean): Promise<void>
     /** Interrompe a resposta em andamento; a conversa continua aberta. */

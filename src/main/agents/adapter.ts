@@ -2,6 +2,12 @@
 // adaptador que traduz a sua saída para AgentEvent.
 import type { AgentEvent, AgentId, AgentSettings } from '../../shared/types'
 
+/** Imagem anexada: caminho da cópia guardada e o tipo (image/png...). */
+export interface ImageInput {
+  path: string
+  mime: string
+}
+
 export interface AgentAdapter {
   readonly id: AgentId
 
@@ -21,8 +27,11 @@ export interface AgentAdapter {
   /** Troca o modelo e o esforço da sessão aberta; vale a partir da próxima mensagem. */
   configure(sessionId: string, settings: AgentSettings): Promise<void>
 
-  /** Envia uma mensagem do usuário para a sessão. */
-  send(sessionId: string, message: string): Promise<void>
+  /**
+   * Envia uma mensagem do usuário para a sessão. `images` são anexos de imagem
+   * que o agente deve "ver" (os caminhos de todos os anexos já vêm no texto).
+   */
+  send(sessionId: string, message: string, images?: ImageInput[]): Promise<void>
 
   /** Responde a um pedido de autorização feito pelo agente. */
   respond(sessionId: string, requestId: string, allow: boolean): Promise<void>

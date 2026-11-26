@@ -2570,3 +2570,336 @@ button.group__title:hover {
   overflow-wrap: anywhere;
   user-select: text;
 }
+
+/* ---- Chats rápidos (menu lateral) ------------------------------------------------- */
+.nav__divider {
+  margin: var(--space-2) var(--space-2);
+  border: 0;
+  border-top: 1px solid var(--color-stroke);
+}
+
+.quick {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.quick__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: var(--space-3);
+}
+
+.quick__label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.nav--collapsed .quick__label {
+  display: none;
+}
+
+.nav--collapsed .quick__header {
+  justify-content: center;
+  padding-left: 0;
+}
+
+.quick__menu {
+  left: 0;
+  right: auto;
+}
+
+.quick__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.quick-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.quick-item__open {
+  min-width: 0;
+}
+
+.quick-item--active .quick-item__open {
+  background: var(--color-subtle-hover);
+}
+
+.quick-item--active .quick-item__open::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  transform: translateY(-50%);
+}
+
+/* Renomear e excluir aparecem ao passar o mouse. */
+.quick-item__tools {
+  position: absolute;
+  right: var(--space-1);
+  display: none;
+  gap: 2px;
+  border-radius: var(--radius-control);
+  background: var(--color-bg-base);
+}
+
+.quick-item:hover .quick-item__tools,
+.quick-item:focus-within .quick-item__tools {
+  display: flex;
+}
+
+.quick-item__tools .btn--icon {
+  width: 28px;
+  height: 28px;
+}
+
+.quick-item__input {
+  margin: 0 var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.quick-item--confirm {
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+}
+
+.quick-item--confirm .text-caption {
+  flex-basis: 100%;
+}
+
+/* ---- Anexos ------------------------------------------------------------------------ */
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.bubble .attachments {
+  margin-bottom: var(--space-2);
+  white-space: normal;
+}
+
+.attachment {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 240px;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-control);
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.attachment--file {
+  height: var(--size-control);
+  padding: 0 var(--space-6) 0 var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.attachment__image {
+  display: block;
+  width: var(--size-attachment);
+  height: var(--size-attachment);
+  object-fit: cover;
+}
+
+.attachment__name {
+  color: var(--color-text-primary);
+  font-size: var(--text-caption);
+}
+
+.attachment__remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-flyout);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-card);
+}
+
+.attachment__remove .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.composer__files {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: stretch;
+}
+
+.composer__error {
+  align-self: stretch;
+}
+
+.composer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: stretch;
+}
+
+/* Arrastando arquivos sobre a caixa de mensagem. */
+.chat__composer--drop {
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -6px;
+  background: var(--color-accent-subtle);
+}
+
+/* ---- Conectores ------------------------------------------------------------------------ */
+.connector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--size-project-card), 1fr));
+  gap: var(--space-3);
+}
+
+.connector-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.connector-card svg,
+.connector-row svg {
+  flex-shrink: 0;
+}
+
+.connector-card__name {
+  font-weight: var(--weight-semibold);
+}
+
+.connector-card__tools {
+  display: flex;
+  gap: 2px;
+}
+
+.connector-card__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-basis: 100%;
+}
+
+.connector-status {
+  flex-shrink: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-subtle-hover);
+  color: var(--color-text-secondary);
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+
+.connector-status--on {
+  color: var(--color-success);
+}
+
+.connector-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.connector-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-card);
+}
+
+.connector-row__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
+.connector-row__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* ---- Janela sobreposta (modal) --------------------------------------------------------- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  background: var(--color-overlay);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: var(--size-modal);
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid var(--color-stroke);
+  border-radius: var(--radius-surface);
+  background: var(--color-bg-layer);
+  box-shadow: var(--shadow-flyout);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2) var(--space-6);
+}
+
+.modal__title {
+  flex: 1;
+  font-size: var(--text-subtitle);
+  line-height: var(--leading-subtitle);
+  font-weight: var(--weight-semibold);
+}
+
+.modal__tabs {
+  padding: 0 var(--space-6);
+  border-bottom: 1px solid var(--color-stroke);
+}
+
+.modal__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  overflow-y: auto;
+}

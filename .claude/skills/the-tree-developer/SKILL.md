@@ -20,7 +20,8 @@ cadastra pastas como **projetos** e, em cada projeto, conversa com três agentes
 paralelo: **Claude** (Claude Code via Agent SDK), **ChatGPT** (Codex via
 `codex app-server`) e **Gemini** (Gemini CLI via ACP). Por cima disso há **skills**
 (instruções reutilizáveis), **automações** (fluxos de passos que rodam sozinhos num
-horário), **conectores** (e-mail SMTP) e o app fica na **bandeja do Windows** para as
+horário), **chats rápidos** (conversas fora de projeto, no menu lateral), **anexos**
+no chat, **conectores** (contas dos agentes e e-mail SMTP) e o app fica na **bandeja do Windows** para as
 automações dispararem com a janela fechada. É distribuído como instalador NSIS.
 
 Toda a interface, os textos, as mensagens de erro e os comentários do código são em
@@ -46,6 +47,8 @@ src/main/        processo principal (Node)
   automations/     engine.ts (fila, execução, aprovação, agendador), js.ts (vm), store.ts,
                    agent-run.ts (conversa temporária de um passo)
   connectors/      store.ts (SMTP com nodemailer)
+  accounts/        service.ts (login/status/logout de Claude e Codex pelos CLIs; Gemini = chave)
+  attachments/     store.ts (cópia dos anexos, protocolo tree-attachment:// das miniaturas)
   skills/          store.ts (skills.json), prompt.ts (injeta a skill na mensagem)
   projects/        store.ts (projects.json, grupos)
   files/           service.ts (árvore/leitura dentro do projeto), watcher.ts,
@@ -92,6 +95,11 @@ app instalado e o `npm run dev` compartilharem os mesmos dados):
 | `connectors.json` | conectores SMTP, sem senha |
 | `secrets.json` | chave do Gemini e senhas dos conectores, criptografadas |
 | `app-state.json` | `startupConfigured`, `trayHintShown` |
+| `attachments/<uuid>/<arquivo>` | cópias dos anexos do chat |
+| `quick-chats/` | pasta de trabalho dos agentes nos chats rápidos |
+
+Chats rápidos são conversas do "projeto" interno `QUICK_PROJECT_ID` (`'__quick'`), em
+`chats/__quick.json`; ele não existe em `projects.json`.
 
 Na tela, `localStorage` guarda só preferências visuais: `the-tree:nav-collapsed`,
 `the-tree:groups-collapsed`, `the-tree:open-projects` (abas abertas).
@@ -148,6 +156,10 @@ conseguimos ler).
 - O leitor de arquivos do projeto só acessa caminhos dentro do projeto; a única
   exceção é o leitor de `.md/.mdx`, que lê qualquer arquivo Markdown (até 2 MB).
 - Skills e conectores removidos do app nunca apagam nada do disco.
+- Anexos: o main só aceita caminhos dentro de `attachments/` (`isAttachment`); a CSP da
+  página libera imagens só de `tree-attachment:`. Limite de 25 MB por arquivo.
+- Login/logout de Claude e ChatGPT mexe na conta real do computador: não teste isso
+  sem o dono pedir; teste só a leitura do status.
 
 ## Fluxo de trabalho com o dono
 

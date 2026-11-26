@@ -1,7 +1,7 @@
 // Ponte segura entre a interface e o processo principal.
 // A interface não acessa o Node diretamente; só o que for exposto aqui em window.api.
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AgentEvent, FilesChanged, TreeApi } from '../shared/types'
+import type { AccountId, AgentEvent, FilesChanged, TreeApi } from '../shared/types'
 
 /** Escuta um canal de avisos do processo principal; devolve a função para parar. */
 function listen<T>(channel: string, listener: (payload: T) => void): () => void {
@@ -57,6 +57,17 @@ const api: TreeApi = {
   system: {
     showInFolder: (path) => ipcRenderer.invoke('system:showInFolder', path)
   },
+  attachments: {
+    save: (name, bytes) => ipcRenderer.invoke('attachments:save', name, bytes),
+    pick: () => ipcRenderer.invoke('attachments:pick')
+  },
+  accounts: {
+    status: () => ipcRenderer.invoke('accounts:status'),
+    login: (id) => ipcRenderer.invoke('accounts:login', id),
+    logout: (id) => ipcRenderer.invoke('accounts:logout', id),
+    onLoginLink: (listener) =>
+      listen<{ id: AccountId; url: string }>('accounts:loginLink', listener)
+  },
   connectors: {
     list: () => ipcRenderer.invoke('connectors:list'),
     save: (input) => ipcRenderer.invoke('connectors:save', input),
@@ -95,8 +106,8 @@ const api: TreeApi = {
   agents: {
     start: (projectId, conversationId) =>
       ipcRenderer.invoke('agents:start', projectId, conversationId),
-    send: (sessionId, message, skills) =>
-      ipcRenderer.invoke('agents:send', sessionId, message, skills ?? []),
+    send: (sessionId, message, skills, attachments) =>
+      ipcRenderer.invoke('agents:send', sessionId, message, skills ?? [], attachments ?? []),
     respond: (sessionId, requestId, allow) =>
       ipcRenderer.invoke('agents:respond', sessionId, requestId, allow),
     interrupt: (sessionId) => ipcRenderer.invoke('agents:interrupt', sessionId),

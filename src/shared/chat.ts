@@ -1,12 +1,26 @@
 // Regras de como os eventos dos agentes viram itens da conversa.
 // Usadas pela interface (para mostrar) e pelo processo principal (para salvar o histórico),
 // assim os dois lados sempre concordam sobre o que a conversa contém.
-import type { AgentEvent, ChatItem, PermissionState } from './types'
+import type { AgentEvent, Attachment, ChatItem, PermissionState } from './types'
 
 const newId = (): string => crypto.randomUUID()
 
-export function addUserMessage(items: ChatItem[], text: string, skills: string[] = []): ChatItem[] {
-  return [...items, { kind: 'user', id: newId(), text, ...(skills.length > 0 ? { skills } : {}) }]
+export function addUserMessage(
+  items: ChatItem[],
+  text: string,
+  skills: string[] = [],
+  attachments: Attachment[] = []
+): ChatItem[] {
+  return [
+    ...items,
+    {
+      kind: 'user',
+      id: newId(),
+      text,
+      ...(skills.length > 0 ? { skills } : {}),
+      ...(attachments.length > 0 ? { attachments } : {})
+    }
+  ]
 }
 
 export function setPermission(

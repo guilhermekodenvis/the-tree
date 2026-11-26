@@ -36,6 +36,26 @@ mudar uma regra destas, confirme com ele antes.
   no leitor com "voltar"; âncoras rolam até o título. O `urlTransform` do
   react-markdown precisa manter caminhos `C:\...`, senão o link fica vazio.
 
+## Chats rápidos
+
+- No menu lateral, abaixo de Conectores: linha divisória, "Chats rápidos", a lista e
+  um "+" que pergunta o agente. Servem para dúvidas e tarefas fora dos projetos.
+- São conversas normais (modelo, esforço, bypass, "/" com skills globais, anexos) do
+  projeto interno `__quick`; o agente trabalha em `<dados>/quick-chats`.
+- O nome vem da primeira mensagem (até 40 caracteres) enquanto for o automático
+  ("Claude 2"); renomear com duplo clique ou lápis, excluir pela lixeira.
+
+## Anexos no chat
+
+- Colar (Ctrl+V, inclusive prints), arrastar para a caixa ou clipe (seletor do
+  Windows, vários arquivos). Miniatura para imagens, cartão com nome para o resto.
+- Cada anexo é copiado para `attachments/<uuid>/`. Imagens (png, jpg, gif, webp) vão
+  como imagem de verdade: Claude em bloco base64, Codex como `localImage`, Gemini como
+  imagem ACP se ele declarar suporte. Todos os anexos também vão listados com o caminho
+  no fim da mensagem, para o agente abrir (ex.: PDF).
+- O Claude recebe `additionalDirectories: [attachments]`, para ler anexos sem pedir
+  autorização. O histórico guarda os anexos na mensagem do usuário.
+
 ## Skills
 
 - Uma skill é uma pasta com `SKILL.md` ou um `.md` solto. O app guarda **só o
@@ -99,9 +119,20 @@ Decididas com o dono numa conversa longa; estas são as escolhas dele:
 
 ## Conectores
 
-- Menu **Conectores** reúne integrações com serviços de fora. Hoje: e-mail SMTP, com
-  o **Gmail** pronto (smtp.gmail.com:587 STARTTLS + **senha de app**, que exige
+- A tela mostra os conectores adicionados em cartões (logo, conta, editar, excluir)
+  e um botão "Adicionar conector", que abre uma janela com as abas **Conectores
+  adicionados** (Editar conexão / Remover conexão) e **Novos conectores** (Conectar).
+- Catálogo, por decisão do dono, só com: **Claude, ChatGPT, Gemini e Gmail**. Logos
+  desenhadas em `components/ui/Logo.tsx` com cores em tokens `--color-brand-*`.
+- **Claude e ChatGPT** não têm login próprio no app: usam a conta do Claude Code e do
+  Codex do computador. Status por `claude auth status --json` (CLI que vem no Agent
+  SDK) e `account/read` do Codex app-server. Conectar = `claude auth login` /
+  `account/login/start` (abre o navegador; o link também aparece na tela). Remover =
+  logout, que vale para o computador inteiro (a tela avisa).
+- **Gemini** = chave de API (o mesmo formulário de antes).
+- **Gmail**: e-mail SMTP (smtp.gmail.com:587 STARTTLS + **senha de app**, que exige
   verificação em duas etapas). Pode haver vários; o passo de e-mail escolhe qual.
+  Conectores SMTP antigos que não são Gmail continuam aparecendo e editáveis.
 - Senha digitada pelo usuário, guardada em `secrets.ts`, nunca devolvida. "Testar"
   envia um e-mail para o próprio endereço do conector.
 - Servidor SMTP em `localhost` pode ser sem TLS (útil para teste); externos exigem TLS.

@@ -10,6 +10,10 @@ import appIcon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
 import { unwatchAll } from './files/watcher'
 import { createTray, ensureStartWithWindows, HIDDEN_ARG } from './tray'
+import { registerAttachmentScheme, serveAttachments } from './attachments/store'
+
+// Precisa acontecer antes de o app ficar pronto (miniaturas dos anexos).
+registerAttachmentScheme()
 
 let mainWindow: BrowserWindow | null = null
 let quitting = false
@@ -140,6 +144,7 @@ if (!app.requestSingleInstanceLock()) {
 
 async function start(): Promise<void> {
   app.setAppUserModelId('com.thetree.app')
+  serveAttachments()
   const { agents, engine } = registerIpc({
     notify(title, body, target) {
       if (!Notification.isSupported()) return
