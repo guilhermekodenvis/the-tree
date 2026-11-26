@@ -9,7 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "dist": "electron-vite build && electron-builder --win --x64"
+    "dist": "electron-vite build && electron-builder --win --x64 --publish never"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^2.10.0",
@@ -22,6 +22,7 @@
     "@codemirror/view": "^6.44.0",
     "@google/gemini-cli": "^0.71.1",
     "@openai/codex": "^0.172.0",
+    "electron-updater": "^6.8.11",
     "nodemailer": "^10.6.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -74,6 +75,12 @@
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": false
     },
-    "npmRebuild": false
+    "npmRebuild": false,
+    "publish": {
+      "provider": "github",
+      "owner": "guilhermekodenvis",
+      "repo": "the-tree",
+      "releaseType": "release"
+    }
   }
 }

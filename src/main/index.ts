@@ -11,6 +11,7 @@ import { registerIpc } from './ipc'
 import { unwatchAll } from './files/watcher'
 import { createTray, ensureStartWithWindows, HIDDEN_ARG } from './tray'
 import { registerAttachmentScheme, serveAttachments } from './attachments/store'
+import { startUpdater } from './updater'
 
 // Precisa acontecer antes de o app ficar pronto (miniaturas dos anexos).
 registerAttachmentScheme()
@@ -166,6 +167,23 @@ async function start(): Promise<void> {
   mainWindow = createWindow(!process.argv.includes(HIDDEN_ARG))
   createTray({ show: () => void showWindow(), quit: () => app.quit() })
   await engine.init()
+
+  // Versão nova publicada no GitHub: baixa sozinha e pergunta se pode reiniciar.
+  startUpdater({
+    onChange: (state) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send('updates:changed', state)
+    },
+    onReady: (version) => {
+      if (!Notification.isSupported()) return
+      const note = new Notification({
+        title: `Atualização ${version} pronta`,
+        body: 'Reinicie o The Tree para usar a versão nova (ou ela entra quando o app fechar).',
+        icon: appIcon
+      })
+      note.on('click', () => void showWindow())
+      note.show()
+    }
+  })
 
   // Ao sair, encerra agentes e automações e grava o histórico antes de fechar de vez.
   let stopping = false

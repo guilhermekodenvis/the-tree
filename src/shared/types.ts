@@ -31,6 +31,19 @@ export interface Attachment {
   url: string
 }
 
+/** Situação da atualização automática do app. */
+export interface UpdateState {
+  /** Versão instalada agora. */
+  current: string
+  /**
+   * 'dev': modo de desenvolvimento (não atualiza); 'latest': já é a mais nova;
+   * 'downloading': baixando `version`; 'ready': `version` baixada, falta reiniciar.
+   */
+  status: 'dev' | 'idle' | 'checking' | 'latest' | 'downloading' | 'ready' | 'error'
+  version: string | null
+  error: string | null
+}
+
 /** Conta de um agente, mostrada como conector. */
 export type AccountId = 'claude' | 'codex' | 'gemini'
 
@@ -269,6 +282,14 @@ export interface TreeApi {
   system: {
     /** Abre a pasta do arquivo no Explorer, com ele selecionado. */
     showInFolder(path: string): Promise<void>
+  }
+  updates: {
+    state(): Promise<UpdateState>
+    /** Confere agora se há versão nova. */
+    check(): Promise<void>
+    /** Reinicia o app instalando a versão baixada. */
+    install(): Promise<void>
+    onChange(listener: (state: UpdateState) => void): () => void
   }
   attachments: {
     /** Guarda uma imagem colada ou um arquivo arrastado. */

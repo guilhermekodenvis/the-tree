@@ -1,7 +1,7 @@
 // Ponte segura entre a interface e o processo principal.
 // A interface não acessa o Node diretamente; só o que for exposto aqui em window.api.
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AccountId, AgentEvent, FilesChanged, TreeApi } from '../shared/types'
+import type { AccountId, AgentEvent, FilesChanged, TreeApi, UpdateState } from '../shared/types'
 
 /** Escuta um canal de avisos do processo principal; devolve a função para parar. */
 function listen<T>(channel: string, listener: (payload: T) => void): () => void {
@@ -56,6 +56,12 @@ const api: TreeApi = {
   },
   system: {
     showInFolder: (path) => ipcRenderer.invoke('system:showInFolder', path)
+  },
+  updates: {
+    state: () => ipcRenderer.invoke('updates:state'),
+    check: () => ipcRenderer.invoke('updates:check'),
+    install: () => ipcRenderer.invoke('updates:install'),
+    onChange: (listener) => listen<UpdateState>('updates:changed', listener)
   },
   attachments: {
     save: (name, bytes) => ipcRenderer.invoke('attachments:save', name, bytes),

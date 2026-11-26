@@ -40,7 +40,8 @@ src/shared/      contrato entre processos (os dois lados importam daqui)
 src/main/        processo principal (Node)
   index.ts         janela, bandeja, single-instance, início escondido, avisos do Windows
   ipc.ts           todos os ipcMain.handle; liga canais aos serviços
-  tray.ts          ícone da bandeja e "iniciar com o Windows"
+  tray.ts          ícone da bandeja, "iniciar com o Windows", procurar/instalar atualização
+  updater.ts       atualização automática (electron-updater + Releases do GitHub)
   secrets.ts       segredos criptografados (safeStorage/DPAPI)
   agents/          adapter.ts (interface comum), claude.ts, codex.ts, gemini.ts,
                    manager.ts (sessões, bypass, histórico), history.ts (chats/<projeto>.json)
@@ -170,7 +171,10 @@ conseguimos ler).
   Tree"; o X só esconde) e espere ele confirmar. Não encerre o app dele sem pedir.
 - Seus processos rodam com o AppData virtualizado: os dados que você vê não são os
   dele. Teste com projetos de teste criados por você e limpe tudo no fim.
-- Para o dono usar uma mudança no app instalado, gere o instalador de novo
-  (`npm run dist`) e diga para instalar por cima; os dados continuam.
+- **Publicar = push na `main`.** A Action `.github/workflows/release.yml` gera o
+  instalador (versão `0.1.<execução>`) e publica uma Release em
+  `guilhermekodenvis/the-tree` (público). O app instalado confere ao abrir e a cada
+  hora, baixa sozinho e pergunta se pode reiniciar (ou instala ao fechar). Então só
+  faça push do que foi testado. `npm run dist` gera um instalador local e nunca publica.
 - Quando ele pedir só para planejar ou conversar, não altere código; respeite limites
   de tamanho de resposta que ele pedir.

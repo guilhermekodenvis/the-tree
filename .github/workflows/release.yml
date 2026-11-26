@@ -1,0 +1,46 @@
+# Gera o instalador do The Tree a cada push na main e publica numa Release do
+# GitHub. O app instalado confere essas Releases (electron-updater) e se atualiza.
+# A versão de cada build é 0.1.<número da execução>, sempre maior que a anterior.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Duas publicações ao mesmo tempo poderiam se atropelar: uma espera a outra.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Definir a versão desta build
+        shell: bash
+        run: npm version "0.1.${{ github.run_number }}" --no-git-tag-version
+
+      - name: Conferir tipos
+        run: npm run typecheck
+
+      - name: Compilar
+        run: npx electron-vite build
+
+      - name: Gerar o instalador e publicar a Release
+        run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -16,6 +16,7 @@ import { ProjectTabs } from './components/ProjectTabs'
 import { SkillsScreen } from './components/SkillsScreen'
 import { ConnectorsScreen } from './components/ConnectorsScreen'
 import { QuickChatList, QuickChatScreen } from './components/QuickChats'
+import { UpdateBanner } from './components/UpdateBanner'
 import type { OpenRunTarget } from './components/automations/AutomationsTab'
 import { Button } from './components/ui/Button'
 import { Icon } from './components/ui/Icon'
@@ -119,6 +120,7 @@ export function App() {
         />
       </NavMenu>
       <div className="workspace">
+        <UpdateBanner />
         {inProjects && openProjects.length > 0 && (
           <ProjectTabs
             projects={openProjects}

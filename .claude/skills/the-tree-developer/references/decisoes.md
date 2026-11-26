@@ -138,6 +138,20 @@ Decididas com o dono numa conversa longa; estas são as escolhas dele:
 - Servidor SMTP em `localhost` pode ser sem TLS (útil para teste); externos exigem TLS.
 - A API oficial do Gmail (OAuth) foi descartada por exigir projeto no Google Cloud.
 
+## Atualização automática
+
+- Decisões do dono: repositório **público** (por enquanto), atualização **perguntando**
+  antes de reiniciar, instalador **sem assinatura** (por enquanto).
+- Push na `main` → GitHub Actions (Windows) → `npm ci`, versão `0.1.<run_number>`,
+  typecheck, build, `electron-builder --publish always` com `releaseType: release`
+  (rascunhos seriam ignorados pelo atualizador).
+- No app: `electron-updater` só no app instalado; confere ao abrir e a cada 1 h,
+  baixa em segundo plano, avisa (faixa no topo + aviso do Windows) e instala com
+  "Reiniciar agora" ou ao fechar. O menu do ícone mostra a versão e "Procurar
+  atualizações" / "Reiniciar e atualizar".
+- Escolhido em vez de "`git pull` + build local" (o app instalado não tem código nem
+  Node) e de um listener permanente (o GitHub não avisa o PC sem um servidor no meio).
+
 ## Bandeja, início e instalador
 
 - Fechar no X **esconde** a janela; o app continua na bandeja para as automações.

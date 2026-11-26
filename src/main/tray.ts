@@ -3,6 +3,7 @@
 // dispararem no horário. "Sair", no menu do ícone, encerra de verdade.
 import { app, Menu, nativeImage, Tray } from 'electron'
 import trayIcon from '../../resources/tray@2x.png?asset'
+import { checkNow, installNow, updateState } from './updater'
 
 let tray: Tray | null = null
 
@@ -34,10 +35,20 @@ export function createTray(handlers: { show(): void; quit(): void }): Tray {
   tray = new Tray(image)
   tray.setToolTip('The Tree')
 
-  const build = (): Menu =>
-    Menu.buildFromTemplate([
+  const build = (): Menu => {
+    const update = updateState()
+    return Menu.buildFromTemplate([
       { label: 'Abrir The Tree', click: handlers.show },
       { type: 'separator' },
+      update.status === 'ready'
+        ? { label: `Reiniciar e atualizar para a versão ${update.version}`, click: installNow }
+        : {
+            label: app.isPackaged
+              ? `Versão ${update.current} · Procurar atualizações`
+              : 'Atualizações (só no app instalado)',
+            enabled: app.isPackaged && update.status !== 'checking' && update.status !== 'downloading',
+            click: () => void checkNow()
+          },
       app.isPackaged
         ? {
             label: 'Iniciar com o Windows',
@@ -49,6 +60,7 @@ export function createTray(handlers: { show(): void; quit(): void }): Tray {
       { type: 'separator' },
       { label: 'Sair do The Tree', click: handlers.quit }
     ])
+  }
 
   tray.on('click', handlers.show)
   // Monta o menu na hora de abrir, para o "Iniciar com o Windows" estar atualizado.

@@ -12,6 +12,7 @@ import { AutomationEngine, type EngineHooks } from './automations/engine'
 import * as connectors from './connectors/store'
 import * as accounts from './accounts/service'
 import * as attachments from './attachments/store'
+import { checkNow, installNow, updateState } from './updater'
 import { hasSecret, removeSecret, setSecret } from './secrets'
 
 /** Envia um aviso para todas as janelas abertas. */
@@ -201,6 +202,10 @@ export function registerIpc(hooks: Pick<EngineHooks, 'notify'>): {
           : []
       )
   )
+
+  ipcMain.handle('updates:state', () => updateState())
+  ipcMain.handle('updates:check', () => checkNow())
+  ipcMain.handle('updates:install', () => installNow())
 
   ipcMain.handle('attachments:save', (_e, name: string, bytes: Uint8Array) =>
     attachments.saveBytes(String(name ?? 'anexo'), bytes)
